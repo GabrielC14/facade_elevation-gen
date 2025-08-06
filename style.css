@@ -15,10 +15,34 @@ body {
 #top-bar {
   display: flex;
   justify-content: space-between;
+  align-items: center; /* Adicionado para melhor alinhamento vertical */
   padding: 10px;
   background: #f4f4f4;
   border-bottom: 1px solid #ccc;
 }
+
+/* --- NOVAS REGRAS ADICIONADAS --- */
+#controls {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* Adiciona um espaço entre os inputs e botões */
+}
+
+#clear-grid-btn {
+  padding: 8px 12px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#clear-grid-btn:hover {
+  background-color: #5a6268;
+}
+/* --- FIM DAS NOVAS REGRAS --- */
+
 
 #main-container {
   display: flex;
@@ -187,6 +211,11 @@ body {
   opacity: 1; 
 }
 
+.add-btn.drag-over {
+  background-color: rgba(0, 123, 255, 0.1);
+  opacity: 1; /* Força a visibilidade do '+' e do fundo */
+}
+
 .component-placed {
   position: absolute;
   display: flex;
@@ -319,4 +348,3 @@ body {
   background-color: #007bff;
   color: white;
 }
-

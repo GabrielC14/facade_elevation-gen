@@ -9,11 +9,10 @@
 </head>
 <body>
   <div id="top-bar">
-    <form id="grid-form">
+    <div id="controls">
       <label>Horizontais: <input type="number" id="cols" min="1" value="5" /></label>
       <label>Verticais: <input type="number" id="rows" min="1" value="3" /></label>
-      <button type="submit">Criar Fachada</button>
-    </form>
+      <button id="clear-grid-btn">Limpar Fachada</button> </div>
     <button id="generate-btn">Gerar Croqui</button>
   </div>
 
@@ -23,7 +22,6 @@
       <div class="component" draggable="true" data-type="maxim-ar"></div>
       <div class="component" draggable="true" data-type="veneziana"></div>
     </div>
-
     <div id="canvas-container">
       <div id="croqui-wrapper">
         <div id="corner-box"></div>
@@ -38,21 +36,17 @@
       </div>
     </div>
   </div>
-
   <div id="menu-popup" style="display: none"></div>
-
   <div id="modal-overlay" style="display: none;">
     <div id="modal-content">
       <h3>Pré-visualização do Croqui</h3>
-      <div id="modal-image-container">
-        </div>
+      <div id="modal-image-container"></div>
       <div id="modal-actions">
         <button id="modal-cancel-btn">Cancelar</button>
         <button id="modal-download-btn">Download</button>
       </div>
     </div>
   </div>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="script.js"></script>
 </body>

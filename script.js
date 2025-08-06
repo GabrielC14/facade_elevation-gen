@@ -1,6 +1,9 @@
+// --- ELEMENTOS DO DOM ---
 const grid = document.getElementById("grid");
 const overlay = document.getElementById("overlay");
-const gridForm = document.getElementById("grid-form");
+const colsInput = document.getElementById("cols");
+const rowsInput = document.getElementById("rows");
+const clearGridBtn = document.getElementById("clear-grid-btn");
 const menuPopup = document.getElementById("menu-popup");
 const labelsTop = document.getElementById("labels-top");
 const labelsLeft = document.getElementById("labels-left");
@@ -14,25 +17,14 @@ const modalImageContainer = document.getElementById("modal-image-container");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
 const modalDownloadBtn = document.getElementById("modal-download-btn");
 
-
+// --- ESTADO DA APLICAÇÃO ---
 let numRows = 3;
 let numCols = 5;
 let columnWidths = [];
 let rowHeights = [];
+let gridState = []; // A "fonte da verdade" para nosso grid
 
-gridForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  numCols = parseInt(document.getElementById("cols").value);
-  numRows = parseInt(document.getElementById("rows").value);
-  resetSizes();
-  generateGrid();
-});
-
-function resetSizes() {
-  columnWidths = Array(numCols).fill(100);
-  rowHeights = Array(numRows).fill(100);
-}
-
+// --- FUNÇÕES DE LÓGICA DO GRID ---
 function getX(col) {
   return columnWidths.slice(0, col).reduce((a, b) => a + b, 0);
 }
@@ -41,16 +33,60 @@ function getY(row) {
   return rowHeights.slice(0, row).reduce((a, b) => a + b, 0);
 }
 
-function generateGrid() {
+// Inicializa ou reseta o estado do grid para um novo tamanho
+function resetGridState(newRows, newCols) {
+  numRows = newRows;
+  numCols = newCols;
+  colsInput.value = newCols;
+  rowsInput.value = newRows;
+  gridState = Array(numRows).fill(null).map(() => Array(numCols).fill(null));
+  columnWidths = Array(numCols).fill(100);
+  rowHeights = Array(numRows).fill(100);
+  updateGrid();
+}
+
+// Função principal que redesenha o grid de forma inteligente
+function updateGrid() {
+  const newRows = parseInt(rowsInput.value);
+  const newCols = parseInt(colsInput.value);
+
+  // Adiciona novas linhas se necessário
+  while (gridState.length < newRows) {
+    gridState.push(Array(numCols).fill(null));
+    rowHeights.push(100);
+  }
+  gridState.length = newRows;
+
+  // Adiciona novas colunas a cada linha se necessário
+  gridState.forEach(row => {
+    while (row.length < newCols) {
+      row.push(null);
+    }
+    row.length = newCols;
+  });
+  
+  while (columnWidths.length < newCols) {
+    columnWidths.push(100);
+  }
+
+  numRows = newRows;
+  numCols = newCols;
+  columnWidths.length = newCols;
+  rowHeights.length = newRows;
+
+  redrawAll();
+}
+
+// Redesenha todos os componentes visuais a partir do estado
+function redrawAll() {
   grid.innerHTML = "";
   overlay.innerHTML = "";
   labelsTop.innerHTML = "";
   labelsLeft.innerHTML = "";
 
-  const lineWidth = 2; // Espessura da linha definida no CSS
   const totalWidth = columnWidths.reduce((a, b) => a + b, 0);
   const totalHeight = rowHeights.reduce((a, b) => a + b, 0);
-
+  const lineWidth = 2;
   const containerWidth = totalWidth + lineWidth;
   const containerHeight = totalHeight + lineWidth;
 
@@ -65,33 +101,20 @@ function generateGrid() {
 
   generateLabels();
   generateLines(totalWidth, totalHeight);
-  generateAddButtons();
-
+  
+  for (let r = 0; r < numRows; r++) {
+    for (let c = 0; c < numCols; c++) {
+      if (gridState[r][c]) {
+        insertComponent(r, c, gridState[r][c].type, false);
+      } else {
+        createAddButton(r, c);
+      }
+    }
+  }
   updateCroquiPosition();
 }
 
-function updateCroquiPosition() {
-  croquiWrapper.style.width = 'auto';
-  croquiWrapper.style.height = 'auto';
-
-  const croquiWidth = croquiWrapper.offsetWidth;
-  const croquiHeight = croquiWrapper.offsetHeight;
-
-  const containerWidth = canvasContainer.clientWidth - 40; // -40 para o padding
-  const containerHeight = canvasContainer.clientHeight - 40; // -40 para o padding
-
-  if (croquiWidth > containerWidth || croquiHeight > containerHeight) {
-    croquiWrapper.style.left = '0px';
-    croquiWrapper.style.top = '0px';
-    croquiWrapper.style.transform = 'none';
-  } else {
-    croquiWrapper.style.left = '50%';
-    croquiWrapper.style.top = '50%';
-    croquiWrapper.style.transform = 'translate(-50%, -50%)';
-  }
-}
-
-
+// --- FUNÇÕES DE DESENHO (QUE ESTAVAM FALTANDO) ---
 function generateLabels() {
   columnWidths.forEach((width, index) => {
     const label = document.createElement("div");
@@ -101,7 +124,7 @@ function generateLabels() {
       const newSize = parseInt(prompt("Nova largura (15-300px):", width));
       if (newSize >= 15 && newSize <= 300) {
         columnWidths[index] = newSize;
-        generateGrid();
+        updateGrid();
       }
     });
     labelsTop.appendChild(label);
@@ -115,7 +138,7 @@ function generateLabels() {
       const newSize = parseInt(prompt("Nova altura (15-300px):", height));
       if (newSize >= 15 && newSize <= 300) {
         rowHeights[index] = newSize;
-        generateGrid();
+        updateGrid();
       }
     });
     labelsLeft.appendChild(label);
@@ -131,7 +154,6 @@ function generateLines(totalWidth, totalHeight) {
     grid.appendChild(line);
     y += rowHeights[r] || 0;
   }
-
   let x = 0;
   for (let c = 0; c <= numCols; c++) {
     const line = document.createElement("div");
@@ -142,58 +164,60 @@ function generateLines(totalWidth, totalHeight) {
   }
 }
 
-function generateAddButtons() {
-  for (let r = 0; r < numRows; r++) {
-    for (let c = 0; c < numCols; c++) {
-      const left = getX(c);
-      const top = getY(r);
-      const width = columnWidths[c];
-      const height = rowHeights[r];
-
-      const addBtn = document.createElement("div");
-      addBtn.className = "add-btn";
-      addBtn.style.left = `${left}px`;
-      addBtn.style.top = `${top}px`;
-      addBtn.style.width = `${width}px`;
-      addBtn.style.height = `${height}px`;
-      addBtn.innerText = "+";
-
-      addBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        
-        const svgMaximAr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 104 104"><path d="M0 0 L51 102 L102 0" stroke="black" stroke-width="2" fill="none"/></svg>`;
-        const svgVeneziana = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g stroke="black" stroke-width="1"><line y1="5" x2="100" y2="5" x1="0"></line><line y1="15" x2="100" y2="15" x1="0"></line><line y1="25" x2="100" y2="25" x1="0"></line><line y1="35" x2="100" y2="35" x1="0"></line><line y1="45" x2="100" y2="45" x1="0"></line><line y1="55" x2="100" y2="55" x1="0"></line><line y1="65" x2="100" y2="65" x1="0"></line><line y1="75" x2="100" y2="75" x1="0"></line><line y1="85" x2="100" y2="85" x1="0"></line><line y1="95" x2="100" y2="95" x1="0"></line></g></svg>`;
-
-        menuPopup.innerHTML = `
-          <div class="option" data-select="maxim-ar" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgMaximAr)}');"></div>
-          <div class="option" data-select="veneziana" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgVeneziana)}');"></div>
-        `;
-        menuPopup.style.display = "flex";
-        menuPopup.style.left = `${e.clientX}px`;
-        menuPopup.style.top = `${e.clientY}px`;
-        menuPopup.querySelectorAll(".option").forEach((opt) => {
-          opt.onclick = () => {
-            insertComponent(r, c, opt.dataset.select);
-            menuPopup.style.display = "none";
-          };
-        });
-      });
-      overlay.appendChild(addBtn);
-    }
+function updateCroquiPosition() {
+  croquiWrapper.style.width = 'auto';
+  croquiWrapper.style.height = 'auto';
+  const croquiWidth = croquiWrapper.offsetWidth;
+  const croquiHeight = croquiWrapper.offsetHeight;
+  const containerWidth = canvasContainer.clientWidth - 40;
+  const containerHeight = canvasContainer.clientHeight - 40;
+  if (croquiWidth > containerWidth || croquiHeight > containerHeight) {
+    croquiWrapper.style.left = '0px';
+    croquiWrapper.style.top = '0px';
+    croquiWrapper.style.transform = 'none';
+  } else {
+    croquiWrapper.style.left = '50%';
+    croquiWrapper.style.top = '50%';
+    croquiWrapper.style.transform = 'translate(-50%, -50%)';
   }
 }
 
-function insertComponent(row, col, type) {
-  const left = getX(col);
-  const top = getY(row);
-  const width = columnWidths[col];
-  const height = rowHeights[row];
+// --- FUNÇÕES DE CRIAÇÃO DE ELEMENTOS ---
+function createAddButton(r, c) {
+  const addBtn = document.createElement("div");
+  addBtn.className = "add-btn";
+  addBtn.style.left = `${getX(c)}px`;
+  addBtn.style.top = `${getY(r)}px`;
+  addBtn.style.width = `${columnWidths[c]}px`;
+  addBtn.style.height = `${rowHeights[r]}px`;
+  addBtn.innerText = "+";
+  
+  addBtn.addEventListener("click", (e) => showComponentMenu(e, r, c));
+  addBtn.addEventListener("dragover", (e) => e.preventDefault());
+  addBtn.addEventListener("dragenter", (e) => { e.preventDefault(); addBtn.classList.add("drag-over"); });
+  addBtn.addEventListener("dragleave", () => addBtn.classList.remove("drag-over"));
+  addBtn.addEventListener("drop", (e) => {
+    e.preventDefault();
+    addBtn.classList.remove("drag-over");
+    const type = e.dataTransfer.getData("text/plain");
+    if (type) {
+      gridState[r][c] = { type: type };
+      updateGrid();
+    }
+  });
+  overlay.appendChild(addBtn);
+}
 
-  const btnToRemove = [...overlay.querySelectorAll(".add-btn")].find(
-    (b) => parseInt(b.style.left) === left && parseInt(b.style.top) === top
-  );
-  if (btnToRemove) btnToRemove.remove();
-
+function insertComponent(r, c, type, shouldUpdateState = true) {
+  if (shouldUpdateState) {
+    gridState[r][c] = { type: type };
+    updateGrid();
+    return;
+  }
+  const left = getX(c);
+  const top = getY(r);
+  const width = columnWidths[c];
+  const height = rowHeights[r];
   const comp = document.createElement("div");
   comp.className = "component-placed";
   comp.style.left = `${left}px`;
@@ -208,27 +232,38 @@ function insertComponent(row, col, type) {
     const numLines = 9;
     const lineThickness = 1;
     const lineGap = 9;
-    const gridLineThickness = 2; 
-
+    const gridLineThickness = 2;
     const patternHeight = (numLines * lineThickness) + ((numLines - 1) * lineGap);
-
     const visualAreaHeight = height - gridLineThickness;
-    
     const visualMargin = (visualAreaHeight - patternHeight) / 2;
-
     let currentY = gridLineThickness + visualMargin;
-
     for (let i = 0; i < numLines; i++) {
       lines.push(`<line x1="0" y1="${currentY}" x2="${width}" y2="${currentY}" stroke="black" stroke-width="1" />`);
       currentY += lineThickness + lineGap;
     }
-    
     comp.innerHTML = `<svg viewBox="0 0 ${width} ${height}"><g>${lines.join("")}</g></svg>`;
   }
 
   const trash = document.createElement("button");
   trash.className = "trash-btn";
   trash.innerHTML = `<svg viewBox="0 0 24 24"><path d="M3 6h18M9 6v12M15 6v12M4 6l1 14h14l1-14" /></svg>`;
+  trash.addEventListener("click", (e) => {
+    e.stopPropagation();
+    gridState[r][c] = null;
+    updateGrid();
+  });
+  comp.addEventListener("dragover", (e) => e.preventDefault());
+  comp.addEventListener("dragenter", (e) => { e.preventDefault(); comp.classList.add("hovering"); });
+  comp.addEventListener("dragleave", () => comp.classList.remove("hovering"));
+  comp.addEventListener("drop", (e) => {
+    e.preventDefault();
+    comp.classList.remove("hovering");
+    const newType = e.dataTransfer.getData("text/plain");
+    if (newType) {
+      gridState[r][c] = { type: newType };
+      updateGrid();
+    }
+  });
 
   let hoverTimeout;
   comp.addEventListener("mouseenter", () => {
@@ -238,76 +273,64 @@ function insertComponent(row, col, type) {
     clearTimeout(hoverTimeout);
     comp.classList.remove("hovering");
   });
-  trash.addEventListener("click", () => {
-    comp.remove();
-    generateGrid();
-  });
+
   comp.appendChild(trash);
   overlay.appendChild(comp);
 }
 
-// --- NOVA LÓGICA DE GERAÇÃO E EXPORTAÇÃO ---
+function showComponentMenu(e, r, c) {
+  e.stopPropagation();
+  const svgMaximAr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 102 102"><path d="M1 1 L51 101 L101 1" stroke="black" stroke-width="2" fill="none"/></svg>`;
+  const svgVeneziana = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g stroke="black" stroke-width="1"><line y1="5" x2="100" y2="5" x1="0"></line><line y1="15" x2="100" y2="15" x1="0"></line><line y1="25" x2="100" y2="25" x1="0"></line><line y1="35" x2="100" y2="35" x1="0"></line><line y1="45" x2="100" y2="45" x1="0"></line><line y1="55" x2="100" y2="55" x1="0"></line><line y1="65" x2="100" y2="65" x1="0"></line><line y1="75" x2="100" y2="75" x1="0"></line><line y1="85" x2="100" y2="85" x1="0"></line><line y1="95" x2="100" y2="95" x1="0"></line></g></svg>`;
+  menuPopup.innerHTML = `
+    <div class="option" data-select="maxim-ar" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgMaximAr)}');"></div>
+    <div class="option" data-select="veneziana" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgVeneziana)}');"></div>
+  `;
+  menuPopup.style.display = "flex";
+  menuPopup.style.left = `${e.clientX}px`;
+  menuPopup.style.top = `${e.clientY}px`;
+  menuPopup.querySelectorAll(".option").forEach((opt) => {
+    opt.onclick = () => {
+      gridState[r][c] = { type: opt.dataset.select };
+      updateGrid();
+      menuPopup.style.display = "none";
+    };
+  });
+}
+
+// --- LÓGICA DO MODAL E EXPORTAÇÃO ---
 generateBtn.addEventListener("click", () => {
   const gridElement = document.getElementById("grid-container");
-
   html2canvas(gridElement).then(baseCanvas => {
     const finalCanvas = document.createElement('canvas');
     const ctx = finalCanvas.getContext('2d');
-
     const marcoRespiro = 1;
     const marcoEspessura = 3;
     const espacoExtra = marcoRespiro + marcoEspessura;
-
     const paddingTop = 50 + espacoExtra;
     const paddingLeft = 50 + espacoExtra;
     const paddingBottom = 70 + espacoExtra;
     const paddingRight = 70 + espacoExtra;
-
     const cotaOffset = 20;
     const cotaBracketSize = 10;
-
     finalCanvas.width = paddingLeft + baseCanvas.width + paddingRight;
     finalCanvas.height = paddingTop + baseCanvas.height + paddingBottom;
-
-    // 1. Pinta o fundo de branco
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-
-    // 2. DESENHA A BORDA (MARCO) de forma precisa
-    // Primeiro, desenhamos um retângulo preto maior que será a nossa borda.
     ctx.fillStyle = 'black';
-    ctx.fillRect(
-      paddingLeft - espacoExtra,
-      paddingTop - espacoExtra,
-      baseCanvas.width + (espacoExtra * 2),
-      baseCanvas.height + (espacoExtra * 2)
-    );
-    // Depois, desenhamos um retângulo branco por cima para criar o "respiro" (espaço em branco).
+    ctx.fillRect(paddingLeft - espacoExtra, paddingTop - espacoExtra, baseCanvas.width + (espacoExtra * 2), baseCanvas.height + (espacoExtra * 2));
     ctx.fillStyle = 'white';
-    ctx.fillRect(
-      paddingLeft - marcoRespiro,
-      paddingTop - marcoRespiro,
-      baseCanvas.width + (marcoRespiro * 2),
-      baseCanvas.height + (marcoRespiro * 2)
-    );
-
-    // 3. Desenha o croqui por cima de tudo
+    ctx.fillRect(paddingLeft - marcoRespiro, paddingTop - marcoRespiro, baseCanvas.width + (marcoRespiro * 2), baseCanvas.height + (marcoRespiro * 2));
     ctx.drawImage(baseCanvas, paddingLeft, paddingTop);
-
-
-    // 4. DESENHA AS COTAS (H e L)
     ctx.strokeStyle = 'black';
     ctx.fillStyle = 'black';
     ctx.lineWidth = 2;
     ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-
-    // Cota de Altura (H)
     const h_x = paddingLeft + baseCanvas.width + cotaOffset;
     const h_y_start = paddingTop - espacoExtra;
     const h_y_end = paddingTop + baseCanvas.height + espacoExtra;
-
     ctx.beginPath();
     ctx.moveTo(h_x, h_y_start);
     ctx.lineTo(h_x, h_y_end);
@@ -316,13 +339,10 @@ generateBtn.addEventListener("click", () => {
     ctx.moveTo(h_x - cotaBracketSize / 2, h_y_end);
     ctx.lineTo(h_x + cotaBracketSize / 2, h_y_end);
     ctx.stroke();
-    ctx.fillText('H', h_x + 15, paddingTop + baseCanvas.height / 2); // <-- CORRIGIDO: O texto agora vai aparecer
-
-    // Cota de Largura (L)
+    ctx.fillText('H', h_x + 15, paddingTop + baseCanvas.height / 2);
     const l_y = paddingTop + baseCanvas.height + cotaOffset;
     const l_x_start = paddingLeft - espacoExtra;
     const l_x_end = paddingLeft + baseCanvas.width + espacoExtra;
-
     ctx.beginPath();
     ctx.moveTo(l_x_start, l_y);
     ctx.lineTo(l_x_end, l_y);
@@ -331,22 +351,17 @@ generateBtn.addEventListener("click", () => {
     ctx.moveTo(l_x_end, l_y - cotaBracketSize / 2);
     ctx.lineTo(l_x_end, l_y + cotaBracketSize / 2);
     ctx.stroke();
-    ctx.fillText('L', paddingLeft + baseCanvas.width / 2, l_y + 20); // <-- CORRIGIDO: O texto agora vai aparecer
-
-    // Exibe a imagem final no modal
+    ctx.fillText('L', paddingLeft + baseCanvas.width / 2, l_y + 20);
     const finalImage = new Image();
     finalImage.src = finalCanvas.toDataURL('image/png');
     modalImageContainer.innerHTML = '';
     modalImageContainer.appendChild(finalImage);
-
     modalOverlay.style.display = 'flex';
   });
 });
-
 modalCancelBtn.addEventListener('click', () => {
   modalOverlay.style.display = 'none';
 });
-
 modalDownloadBtn.addEventListener('click', () => {
   const finalImage = modalImageContainer.querySelector('img');
   if (finalImage) {
@@ -358,14 +373,30 @@ modalDownloadBtn.addEventListener('click', () => {
   modalOverlay.style.display = 'none';
 });
 
-
-// Evento para fechar o menu popup ao clicar fora dele
+// --- EVENT LISTENERS GERAIS ---
+colsInput.addEventListener("change", updateGrid);
+rowsInput.addEventListener("change", updateGrid);
+clearGridBtn.addEventListener("click", () => {
+  if (confirm("Tem certeza que deseja limpar toda a fachada?")) {
+    resetGridState(parseInt(rowsInput.value), parseInt(colsInput.value));
+  }
+});
 document.addEventListener("click", (e) => {
   if (!menuPopup.contains(e.target) && !e.target.classList.contains('add-btn')) {
     menuPopup.style.display = "none";
   }
 });
 
-// Inicial
-resetSizes();
-generateGrid();
+function initializeDraggableComponents() {
+  const components = document.querySelectorAll("#sidebar .component");
+  components.forEach(component => {
+    component.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", component.dataset.type);
+      e.dataTransfer.effectAllowed = "copy";
+    });
+  });
+}
+
+// --- INICIALIZAÇÃO ---
+resetGridState(numRows, numCols);
+initializeDraggableComponents();
