@@ -8,8 +8,6 @@ const canvasWrapper = document.getElementById("canvas-wrapper");
 const gridContainer = document.getElementById("grid-container");
 const canvasContainer = document.getElementById("canvas-container");
 const croquiWrapper = document.getElementById("croqui-wrapper");
-
-// --- NOVAS CONSTANTES PARA O MODAL ---
 const generateBtn = document.getElementById("generate-btn");
 const modalOverlay = document.getElementById("modal-overlay");
 const modalImageContainer = document.getElementById("modal-image-container");
@@ -162,8 +160,9 @@ function generateAddButtons() {
 
       addBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const svgMaximAr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 102 102"><path d="M2 2 L50 100 L100 2" stroke="black" stroke-width="2" fill="none"/></svg>`;
-        const svgVeneziana = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 102 102"><g stroke="black" stroke-width="1"><line y1="12" y2="12" x1="2" x2="100"/><line y1="20" y2="20" x1="2" x2="100"/><line y1="28" y2="28" x1="2" x2="100"/><line y1="36" y2="36" x1="2" x2="100"/><line y1="44" y2="44" x1="2" x2="100"/><line y1="52" y2="52" x1="2" x2="100"/><line y1="60" y2="60" x1="2" x2="100"/><line y1="68" y2="68" x1="2" x2="100"/><line y1="76" y2="76" x1="2" x2="100"/><line y1="84" y2="84" x1="2" x2="100"/></g></svg>`;
+        
+        const svgMaximAr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 104 104"><path d="M0 0 L51 102 L102 0" stroke="black" stroke-width="2" fill="none"/></svg>`;
+        const svgVeneziana = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g stroke="black" stroke-width="1"><line y1="5" x2="100" y2="5" x1="0"></line><line y1="15" x2="100" y2="15" x1="0"></line><line y1="25" x2="100" y2="25" x1="0"></line><line y1="35" x2="100" y2="35" x1="0"></line><line y1="45" x2="100" y2="45" x1="0"></line><line y1="55" x2="100" y2="55" x1="0"></line><line y1="65" x2="100" y2="65" x1="0"></line><line y1="75" x2="100" y2="75" x1="0"></line><line y1="85" x2="100" y2="85" x1="0"></line><line y1="95" x2="100" y2="95" x1="0"></line></g></svg>`;
 
         menuPopup.innerHTML = `
           <div class="option" data-select="maxim-ar" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgMaximAr)}');"></div>
@@ -203,14 +202,27 @@ function insertComponent(row, col, type) {
   comp.style.height = `${height}px`;
 
   if (type === "maxim-ar") {
-    comp.innerHTML = `<svg viewBox="0 0 ${width} ${height}"><path d="M2 2 L${width / 2} ${height - 2} L${width - 2} 2" stroke="black" stroke-width="2" fill="none"/></svg>`;
+    comp.innerHTML = `<svg viewBox="-2 -2 ${width + 2} ${height + 2}"><path d="M0 0 L${width / 2} ${height} L${width} 0" stroke="black" stroke-width="2" fill="none"/></svg>`;
   } else if (type === "veneziana") {
     const lines = [];
-    const numLines = Math.floor(height / 10) - 1;
-    for (let i = 1; i <= numLines; i++) {
-      const yPos = (height / (numLines + 1)) * i;
-      lines.push(`<line x1="0" y1="${yPos}" x2="${width}" y2="${yPos}" stroke="black" stroke-width="1"/>`);
+    const numLines = 9;
+    const lineThickness = 1;
+    const lineGap = 9;
+    const gridLineThickness = 2; 
+
+    const patternHeight = (numLines * lineThickness) + ((numLines - 1) * lineGap);
+
+    const visualAreaHeight = height - gridLineThickness;
+    
+    const visualMargin = (visualAreaHeight - patternHeight) / 2;
+
+    let currentY = gridLineThickness + visualMargin;
+
+    for (let i = 0; i < numLines; i++) {
+      lines.push(`<line x1="0" y1="${currentY}" x2="${width}" y2="${currentY}" stroke="black" stroke-width="1" />`);
+      currentY += lineThickness + lineGap;
     }
+    
     comp.innerHTML = `<svg viewBox="0 0 ${width} ${height}"><g>${lines.join("")}</g></svg>`;
   }
 
@@ -353,7 +365,6 @@ document.addEventListener("click", (e) => {
     menuPopup.style.display = "none";
   }
 });
-
 
 // Inicial
 resetSizes();

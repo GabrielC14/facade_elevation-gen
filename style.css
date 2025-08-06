@@ -52,11 +52,11 @@ body {
 }
 
 .component[data-type="maxim-ar"] {
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 102 102"><path d="M2 2 L50 100 L100 2" stroke="black" stroke-width="2" fill="none"/></svg>');
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 104 104"><path d="M0 0 L51 102 L102 0" stroke="black" stroke-width="2" fill="none"/></svg>');
 }
 
 .component[data-type="veneziana"] {
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 102 102"><g stroke="black" stroke-width="1"><line y1="12" y2="12" x1="2" x2="100"/><line y1="20" y2="20" x1="2" x2="100"/><line y1="28" y2="28" x1="2" x2="100"/><line y1="36" y2="36" x1="2" x2="100"/><line y1="44" y2="44" x1="2" x2="100"/><line y1="52" y2="52" x1="2" x2="100"/><line y1="60" y2="60" x1="2" x2="100"/><line y1="68" y2="68" x1="2" x2="100"/><line y1="76" y2="76" x1="2" x2="100"/><line y1="84" y2="84" x1="2" x2="100"/></g></svg>');
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g stroke="black" stroke-width="1"><line y1="5" x2="100" y2="5" x1="0"></line><line y1="15" x2="100" y2="15" x1="0"></line><line y1="25" x2="100" y2="25" x1="0"></line><line y1="35" x2="100" y2="35" x1="0"></line><line y1="45" x2="100" y2="45" x1="0"></line><line y1="55" x2="100" y2="55" x1="0"></line><line y1="65" x2="100" y2="65" x1="0"></line><line y1="75" x2="100" y2="75" x1="0"></line><line y1="85" x2="100" y2="85" x1="0"></line><line y1="95" x2="100" y2="95" x1="0"></line></g></svg>');
 }
 
 #canvas-container {
@@ -68,7 +68,7 @@ body {
 }
 
 #croqui-wrapper {
-  position: absolute; /* Permite o controle via JS */
+  position: absolute;
   display: inline-grid;
   grid-template-areas:
     "corner top"
@@ -285,7 +285,7 @@ body {
 
 #modal-image-container {
   margin-bottom: 20px;
-  overflow: auto; /* Para caso a imagem seja muito grande */
+  overflow: auto;
   border: 1px solid #ddd;
 }
 
@@ -319,3 +319,4 @@ body {
   background-color: #007bff;
   color: white;
 }
+
