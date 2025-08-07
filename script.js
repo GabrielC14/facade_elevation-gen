@@ -1,4 +1,3 @@
-// --- ELEMENTOS DO DOM ---
 const grid = document.getElementById("grid");
 const overlay = document.getElementById("overlay");
 const colsInput = document.getElementById("cols");
@@ -17,14 +16,12 @@ const modalImageContainer = document.getElementById("modal-image-container");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
 const modalDownloadBtn = document.getElementById("modal-download-btn");
 
-// --- ESTADO DA APLICAÇÃO ---
 let numRows = 3;
 let numCols = 5;
 let columnWidths = [];
 let rowHeights = [];
 let gridState = []; // A "fonte da verdade" para nosso grid
 
-// --- FUNÇÕES DE LÓGICA DO GRID ---
 function getX(col) {
   return columnWidths.slice(0, col).reduce((a, b) => a + b, 0);
 }
@@ -33,7 +30,6 @@ function getY(row) {
   return rowHeights.slice(0, row).reduce((a, b) => a + b, 0);
 }
 
-// Inicializa ou reseta o estado do grid para um novo tamanho
 function resetGridState(newRows, newCols) {
   numRows = newRows;
   numCols = newCols;
@@ -45,19 +41,14 @@ function resetGridState(newRows, newCols) {
   updateGrid();
 }
 
-// Função principal que redesenha o grid de forma inteligente
 function updateGrid() {
   const newRows = parseInt(rowsInput.value);
   const newCols = parseInt(colsInput.value);
-
-  // Adiciona novas linhas se necessário
   while (gridState.length < newRows) {
     gridState.push(Array(numCols).fill(null));
     rowHeights.push(100);
   }
   gridState.length = newRows;
-
-  // Adiciona novas colunas a cada linha se necessário
   gridState.forEach(row => {
     while (row.length < newCols) {
       row.push(null);
@@ -77,7 +68,6 @@ function updateGrid() {
   redrawAll();
 }
 
-// Redesenha todos os componentes visuais a partir do estado
 function redrawAll() {
   grid.innerHTML = "";
   overlay.innerHTML = "";
@@ -178,7 +168,7 @@ function showCustomModal(options) {
   });
 }
 
-// --- FUNÇÕES DE DESENHO (QUE ESTAVAM FALTANDO) ---
+// --- LABELS / TAMANHOS ---
 function generateLabels() {
   columnWidths.forEach((width, index) => {
     const label = document.createElement("div");
@@ -234,7 +224,6 @@ function generateLabels() {
     labelsLeft.appendChild(label);
   });
 }
-
 
 function generateLines(totalWidth, totalHeight) {
   let y = 0;
@@ -343,7 +332,7 @@ function insertComponent(r, c, type, shouldUpdateState = true) {
 
   const trash = document.createElement("button");
   trash.className = "trash-btn";
-  trash.innerHTML = `<svg viewBox="0 0 24 24"><path d="M3 6h18M9 6v12M15 6v12M4 6l1 14h14l1-14" /></svg>`;
+  trash.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
   trash.addEventListener("click", (e) => {
     e.stopPropagation();
     gridState[r][c] = null;
@@ -364,7 +353,7 @@ function insertComponent(r, c, type, shouldUpdateState = true) {
 
   let hoverTimeout;
   comp.addEventListener("mouseenter", () => {
-    hoverTimeout = setTimeout(() => comp.classList.add("hovering"), 200);
+    hoverTimeout = setTimeout(() => comp.classList.add("hovering"), 100);
   });
   comp.addEventListener("mouseleave", () => {
     clearTimeout(hoverTimeout);
@@ -453,6 +442,9 @@ generateBtn.addEventListener("click", () => {
     finalImage.src = finalCanvas.toDataURL('image/png');
     modalImageContainer.innerHTML = '';
     modalImageContainer.appendChild(finalImage);
+    const filenameInput = document.getElementById('filename-input');
+    const defaultFilename = `ELEVFAC-${numCols}X${numRows}.png`;
+    filenameInput.value = defaultFilename;
     modalOverlay.style.display = 'flex';
   });
 });
@@ -461,16 +453,24 @@ modalCancelBtn.addEventListener('click', () => {
 });
 modalDownloadBtn.addEventListener('click', () => {
   const finalImage = modalImageContainer.querySelector('img');
-  if (finalImage) {
+  const filenameInput = document.getElementById('filename-input');
+  if (finalImage && filenameInput) {
+    let filename = filenameInput.value.trim(); 
+    if (filename === '') {
+      filename = `ELEVFAC-${numCols}X${numRows}.png`;
+    }
+    if (!filename.toLowerCase().endsWith('.png')) {
+    filename += '.png';
+    }
     const link = document.createElement('a');
     link.href = finalImage.src;
-    link.download = 'croqui-final.png';
+    link.download = filename;
     link.click();
   }
   modalOverlay.style.display = 'none';
 });
 
-// --- EVENT LISTENERS GERAIS ---
+// --- EVENTOS GERAIS ---
 document.getElementById('controls').addEventListener('click', (e) => {
   if (e.target.matches('.stepper-btn')) {
     const action = e.target.dataset.action;
@@ -500,7 +500,7 @@ clearGridBtn.addEventListener("click", async () => {
   if (confirmed) {
   resetGridState(parseInt(rowsInput.value), parseInt(colsInput.value));
   }});
-  
+
 document.addEventListener("click", (e) => {
   if (!menuPopup.contains(e.target) && !e.target.classList.contains('add-btn')) {
     menuPopup.style.display = "none";
@@ -517,6 +517,5 @@ function initializeDraggableComponents() {
   });
 }
 
-// --- INICIALIZAÇÃO ---
 resetGridState(numRows, numCols);
 initializeDraggableComponents();
