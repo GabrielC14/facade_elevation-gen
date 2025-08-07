@@ -1,5 +1,5 @@
+/* --- ESTILOS GERAIS E FONTES --- */
 :root {
-  --blue: #009cda;
   --orange: #f8991e;
   --dark-gray: #343a40;
   --medium-gray: #6c757d;
@@ -44,31 +44,84 @@ body {
   gap: 20px;
 }
 
-#controls label {
-  font-weight: 500;
-  color: var(--medium-gray);
+.controls-title {
+  font-weight: 600;
+  color: var(--dark-gray);
+  margin-right: 10px;
+  padding-right: 20px;
+  border-right: 1px solid var(--border-color);
+}
+
+.control-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
+
+.control-group label {
+  font-weight: 500;
+  color: var(--medium-gray);
+}
+
+.input-stepper {
+  display: flex;
+}
+
+.stepper-btn {
+  background-color: var(--light-gray);
+  border: 1px solid var(--border-color);
+  color: var(--medium-gray);
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.stepper-btn:hover {
+  background-color: var(--orange);
+  color: var(--white);
+  border-color: var(--orange);
+}
+
+.stepper-btn:first-child { border-radius: 6px 0 0 6px; }
+.stepper-btn:last-child { border-radius: 0 6px 6px 0; }
 
 #controls input[type="number"] {
   border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 8px 10px;
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+  padding: 8px 5px;
   width: 60px;
+  height: 38px;
+  text-align: center;
   font-family: 'Poppins', sans-serif;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 500;
   transition: border-color 0.2s, box-shadow 0.2s;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+#controls input[type="number"]::-webkit-inner-spin-button,
+#controls input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 #controls input[type="number"]:focus {
   outline: none;
-  border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(0, 156, 218, 0.2);
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(248, 153, 30, 0.25); /* Sombra de foco laranja */
+  position: relative;
+  z-index: 1;
 }
 
-/* Estilos para Botões na Barra Superior */
 #top-bar button {
   padding: 10px 20px;
   border: none;
@@ -94,13 +147,13 @@ body {
 }
 
 #generate-btn {
-  background-color: var(--blue);
+  background-color: var(--orange);
   color: var(--white);
-  box-shadow: 0 2px 4px rgba(0, 156, 218, 0.2);
+  box-shadow: 0 2px 4px rgba(248, 153, 30, 0.2);
 }
 
 #generate-btn:hover {
-  background-color: #0086bf;
+  background-color: #e08810; /* Laranja mais escuro para o hover */
 }
 
 /* --- CONTAINER PRINCIPAL --- */
@@ -123,7 +176,9 @@ body {
 }
 
 #sidebar h3 {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--orange); /* Destaque laranja */
   font-weight: 600;
   color: var(--dark-gray);
 }
@@ -143,8 +198,8 @@ body {
 }
 
 .component:hover {
-  border-color: var(--blue);
-  box-shadow: 0 0 10px rgba(0, 156, 218, 0.2);
+  border-color: var(--orange);
+  box-shadow: 0 0 10px rgba(248, 153, 30, 0.2);
 }
 
 .component[data-type="maxim-ar"] {
@@ -189,7 +244,6 @@ body {
 /* Réguas (Labels) */
 #corner-box, #labels-top, #labels-left {
   background: #f8f9fa;
-  border-color: var(--border-color);
 }
 
 #corner-box {
@@ -221,8 +275,13 @@ body {
   font-size: 12px;
   font-weight: bold;
   cursor: pointer;
-  border-color: var(--border-color);
   color: var(--medium-gray);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+#labels-top div:hover, #labels-left div:hover {
+  background-color: var(--orange);
+  color: var(--white);
 }
 
 #labels-top div {
@@ -254,7 +313,6 @@ body {
 .h-line { height: 2px; width: 100%; }
 .v-line { width: 2px; height: 100%; }
 
-/* Botão '+' e Componentes no Grid */
 .add-btn {
   position: absolute;
   font-size: 32px;
@@ -271,11 +329,11 @@ body {
 
 .add-btn:hover {
   opacity: 1;
-  color: var(--medium-gray);
+  color: var(--orange);
 }
 
 .add-btn.drag-over {
-  background-color: rgba(0, 156, 218, 0.1);
+  background-color: rgba(248, 153, 30, 0.1); /* Destaque de drop laranja */
   opacity: 1;
 }
 
@@ -418,6 +476,102 @@ body {
 }
 
 #modal-download-btn {
-  background-color: var(--blue);
+  background-color: var(--orange);
+  color: var(--white);
+}
+
+#custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-in-out;
+}
+
+#custom-modal-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#custom-modal-content {
+  background: var(--white);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+#custom-modal-title {
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--dark-gray);
+  margin-bottom: 8px;
+}
+
+#custom-modal-text {
+  color: var(--medium-gray);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+#custom-modal-input-wrapper {
+  margin-bottom: 20px;
+}
+
+#custom-modal-input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  text-align: center;
+}
+
+#custom-modal-input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(248, 153, 30, 0.25);
+}
+
+.custom-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.custom-modal-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  transition: transform 0.1s;
+}
+
+.custom-modal-actions button:hover {
+  transform: translateY(-1px);
+}
+
+#custom-modal-cancel-btn {
+  background-color: var(--light-gray);
+  color: var(--medium-gray);
+  border: 1px solid var(--border-color);
+}
+
+#custom-modal-confirm-btn {
+  background-color: var(--orange);
   color: var(--white);
 }

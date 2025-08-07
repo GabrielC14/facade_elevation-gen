@@ -114,17 +114,94 @@ function redrawAll() {
   updateCroquiPosition();
 }
 
+function showCustomModal(options) {
+  const modal = document.getElementById('custom-modal-overlay');
+  const titleEl = document.getElementById('custom-modal-title');
+  const textEl = document.getElementById('custom-modal-text');
+  const inputWrapper = document.getElementById('custom-modal-input-wrapper');
+  const inputEl = document.getElementById('custom-modal-input');
+  const confirmBtn = document.getElementById('custom-modal-confirm-btn');
+  const cancelBtn = document.getElementById('custom-modal-cancel-btn');
+
+  titleEl.textContent = options.title || '';
+  textEl.textContent = options.text || '';
+  confirmBtn.textContent = options.confirmText || 'OK';
+  cancelBtn.textContent = options.cancelText || 'Cancelar';
+
+  if (options.inputType === 'number') {
+    inputWrapper.style.display = 'block';
+    inputEl.value = options.initialValue || '';
+    setTimeout(() => inputEl.focus(), 50);
+  } else {
+    inputWrapper.style.display = 'none';
+  }
+  
+  modal.style.display = 'flex';
+  setTimeout(() => modal.classList.add('visible'), 10);
+
+  return new Promise((resolve) => {
+    const onConfirm = () => {
+      closeModal();
+      resolve(options.inputType ? inputEl.value : true);
+    };
+
+    const onCancel = () => {
+      closeModal();
+      resolve(false);
+    };
+
+    const onKeydown = (e) => {
+      if (e.key === 'Enter') {
+        onConfirm();
+      } else if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+    
+    function closeModal() {
+      modal.classList.remove('visible');
+      setTimeout(() => {
+        modal.style.display = 'none';
+        cleanup();
+      }, 200);
+    }
+    
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', onCancel);
+    document.addEventListener('keydown', onKeydown);
+
+    function cleanup() {
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', onCancel);
+      document.removeEventListener('keydown', onKeydown);
+    }
+  });
+}
+
 // --- FUNÇÕES DE DESENHO (QUE ESTAVAM FALTANDO) ---
 function generateLabels() {
   columnWidths.forEach((width, index) => {
     const label = document.createElement("div");
     label.innerText = String.fromCharCode(65 + index);
     label.style.width = `${width}px`;
-    label.addEventListener("click", () => {
-      const newSize = parseInt(prompt("Nova largura (15-300px):", width));
-      if (newSize >= 15 && newSize <= 300) {
-        columnWidths[index] = newSize;
-        updateGrid();
+    label.addEventListener("click", async () => {
+      const result = await showCustomModal({
+        title: 'Alterar Largura da Coluna',
+        text: `Digite a nova largura para a coluna ${String.fromCharCode(65 + index)} (15-300px):`,
+        inputType: 'number',
+        initialValue: width,
+        confirmText: 'Alterar',
+        cancelText: 'Cancelar'
+      });
+
+      if (result !== false && result !== null && result !== '') {
+        const newSize = parseInt(result);
+        if (!isNaN(newSize) && newSize >= 15 && newSize <= 300) {
+          columnWidths[index] = newSize;
+          updateGrid();
+        } else {
+          showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300.', confirmText: 'OK' });
+        }
       }
     });
     labelsTop.appendChild(label);
@@ -134,16 +211,30 @@ function generateLabels() {
     const label = document.createElement("div");
     label.innerText = index + 1;
     label.style.height = `${height}px`;
-    label.addEventListener("click", () => {
-      const newSize = parseInt(prompt("Nova altura (15-300px):", height));
-      if (newSize >= 15 && newSize <= 300) {
-        rowHeights[index] = newSize;
-        updateGrid();
+    label.addEventListener("click", async () => {
+      const result = await showCustomModal({
+        title: 'Alterar Altura da Linha',
+        text: `Digite a nova altura para a linha ${index + 1} (15-300px):`,
+        inputType: 'number',
+        initialValue: height,
+        confirmText: 'Alterar',
+        cancelText: 'Cancelar'
+      });
+
+      if (result !== false && result !== null && result !== '') {
+        const newSize = parseInt(result);
+        if (!isNaN(newSize) && newSize >= 15 && newSize <= 300) {
+          rowHeights[index] = newSize;
+          updateGrid();
+        } else {
+          showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300.', confirmText: 'OK' });
+        }
       }
     });
     labelsLeft.appendChild(label);
   });
 }
+
 
 function generateLines(totalWidth, totalHeight) {
   let y = 0;
@@ -171,18 +262,19 @@ function updateCroquiPosition() {
   const croquiHeight = croquiWrapper.offsetHeight;
   const containerWidth = canvasContainer.clientWidth - 40;
   const containerHeight = canvasContainer.clientHeight - 40;
-  if (croquiWidth > containerWidth || croquiHeight > containerHeight) {
-    croquiWrapper.style.left = '0px';
-    croquiWrapper.style.top = '0px';
-    croquiWrapper.style.transform = 'none';
+  croquiWrapper.style.transform = 'none';
+  if (croquiWidth > containerWidth) {
+  croquiWrapper.style.left = '0px';
   } else {
-    croquiWrapper.style.left = '50%';
-    croquiWrapper.style.top = '50%';
-    croquiWrapper.style.transform = 'translate(-50%, -50%)';
+  croquiWrapper.style.left = `calc(50% - ${croquiWidth / 2}px)`;
+  }
+  if (croquiHeight > containerHeight) {
+  croquiWrapper.style.top = '0px';
+  } else {
+  croquiWrapper.style.top = `calc(50% - ${croquiHeight / 2}px)`;
   }
 }
 
-// --- FUNÇÕES DE CRIAÇÃO DE ELEMENTOS ---
 function createAddButton(r, c) {
   const addBtn = document.createElement("div");
   addBtn.className = "add-btn";
@@ -228,21 +320,26 @@ function insertComponent(r, c, type, shouldUpdateState = true) {
   if (type === "maxim-ar") {
     comp.innerHTML = `<svg viewBox="-2 -2 ${width + 2} ${height + 2}"><path d="M0 0 L${width / 2} ${height} L${width} 0" stroke="black" stroke-width="2" fill="none"/></svg>`;
   } else if (type === "veneziana") {
-    const lines = [];
-    const numLines = 9;
-    const lineThickness = 1;
-    const lineGap = 9;
-    const gridLineThickness = 2;
-    const patternHeight = (numLines * lineThickness) + ((numLines - 1) * lineGap);
-    const visualAreaHeight = height - gridLineThickness;
-    const visualMargin = (visualAreaHeight - patternHeight) / 2;
-    let currentY = gridLineThickness + visualMargin;
-    for (let i = 0; i < numLines; i++) {
-      lines.push(`<line x1="0" y1="${currentY}" x2="${width}" y2="${currentY}" stroke="black" stroke-width="1" />`);
-      currentY += lineThickness + lineGap;
-    }
-    comp.innerHTML = `<svg viewBox="0 0 ${width} ${height}"><g>${lines.join("")}</g></svg>`;
+  const lines = [];
+  const lineThickness = 1;
+  const lineGap = 8;
+  const gridLineThickness = 2;
+
+  const drawableHeight = height - gridLineThickness;
+  const numLines = Math.floor((drawableHeight + lineGap) / (lineThickness + lineGap));
+  const patternHeight = (numLines * lineThickness) + ((numLines - 1) * lineGap);
+  const visualAreaHeight = height - gridLineThickness;
+  const visualMargin = (visualAreaHeight - patternHeight) / 2;
+  
+  let currentY = gridLineThickness + visualMargin;
+
+  for (let i = 0; i < numLines; i++) {
+    lines.push(`<line x1="0" y1="${currentY}" x2="${width}" y2="${currentY}" stroke="black" stroke-width="1" />`);
+    currentY += lineThickness + lineGap;
   }
+  
+  comp.innerHTML = `<svg viewBox="0 0 ${width} ${height}"><g>${lines.join("")}</g></svg>`;
+}
 
   const trash = document.createElement("button");
   trash.className = "trash-btn";
@@ -374,13 +471,36 @@ modalDownloadBtn.addEventListener('click', () => {
 });
 
 // --- EVENT LISTENERS GERAIS ---
-colsInput.addEventListener("change", updateGrid);
-rowsInput.addEventListener("change", updateGrid);
-clearGridBtn.addEventListener("click", () => {
-  if (confirm("Tem certeza que deseja limpar toda a fachada?")) {
-    resetGridState(parseInt(rowsInput.value), parseInt(colsInput.value));
+document.getElementById('controls').addEventListener('click', (e) => {
+  if (e.target.matches('.stepper-btn')) {
+    const action = e.target.dataset.action;
+    const targetInput = document.getElementById(e.target.dataset.target);
+    if (targetInput) {
+      let value = parseInt(targetInput.value);
+      const min = parseInt(targetInput.min);
+      if (action === 'increment') {
+        value++;
+      } else if (action === 'decrement' && value > min) {
+        value--;
+      }
+      targetInput.value = value;
+      targetInput.dispatchEvent(new Event('change'));
+    }
   }
 });
+colsInput.addEventListener("change", updateGrid);
+rowsInput.addEventListener("change", updateGrid);
+clearGridBtn.addEventListener("click", async () => {
+  const confirmed = await showCustomModal({
+    title: 'Limpar Fachada',
+    text: 'Tem certeza que deseja limpar toda a fachada? Esta ação não pode ser desfeita.',
+    confirmText: 'Sim, Limpar Tudo',
+    cancelText: 'Cancelar'
+  });
+  if (confirmed) {
+  resetGridState(parseInt(rowsInput.value), parseInt(colsInput.value));
+  }});
+  
 document.addEventListener("click", (e) => {
   if (!menuPopup.contains(e.target) && !e.target.classList.contains('add-btn')) {
     menuPopup.style.display = "none";
