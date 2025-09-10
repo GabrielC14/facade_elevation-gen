@@ -47,6 +47,7 @@
       <h3>Componentes</h3>
       <div class="component" draggable="true" data-type="maxim-ar"></div>
       <div class="component" draggable="true" data-type="veneziana"></div>
+      <div class="component" draggable="true" data-type="giro"></div> 
     </div>
     <div id="content-area">
       <div id="canvas-container">
@@ -63,7 +64,7 @@
         </div>
       </div>
       <div id="bottom-bar">
-        <p>desenvolvido por <a href="https://twitter.com/gabrielvcc" target="_blank">gabrielvc</a> - todos os direitos reservados <span>&reg;</span> - v1.0.1</p>
+        <p>desenvolvido por <a href="https://twitter.com/gabrielvcc" target="_blank">gabrielvc</a> - todos os direitos reservados <span>&reg;</span> - <a href="atualizacoes.html" id="version-link">v1.0.2</a></p>
       </div>
     </div>
   </div>
@@ -97,7 +98,39 @@
       </div>
     </div>
   </div>
+  <div id="giro-options-modal-overlay" style="display: none;">
+    <div id="giro-options-modal-content">
+        <h3>Opções da Porta de Giro</h3>
 
+        <div class="giro-option-group">
+            <label>Tamanho</label>
+            <div class="giro-option-buttons">
+                <button class="giro-option-btn" data-size="1">1 Módulo</button>
+                <button class="giro-option-btn" data-size="2">2 Módulos</button>
+            </div>
+        </div>
+
+        <div class="giro-option-group">
+            <label>Direção de Abertura</label>
+            <div class="giro-option-buttons">
+                <button class="giro-option-btn" data-direction="esquerda">Esquerda</button>
+                <button class="giro-option-btn" data-direction="direita">Direita</button>
+            </div>
+        </div>
+
+        <div class="giro-option-group" id="giro-transom-option" style="display: none;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="giro-transom-checkbox">
+                Dividir com travessa 
+            </label>
+        </div>
+
+        <div class="custom-modal-actions">
+            <button id="giro-options-cancel-btn">Cancelar</button>
+            <button id="giro-options-confirm-btn">Confirmar</button>
+        </div>
+    </div>
+  </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="script.js"></script>
 </body>

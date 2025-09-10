@@ -1,3 +1,4 @@
+// --- ELEMENTOS DO DOM ---
 const grid = document.getElementById("grid");
 const overlay = document.getElementById("overlay");
 const colsInput = document.getElementById("cols");
@@ -16,19 +17,16 @@ const modalImageContainer = document.getElementById("modal-image-container");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
 const modalDownloadBtn = document.getElementById("modal-download-btn");
 
+// --- ESTADO DA APLICAÇÃO ---
 let numRows = 3;
 let numCols = 5;
 let columnWidths = [];
 let rowHeights = [];
-let gridState = []; // A "fonte da verdade" para nosso grid
+let gridState = [];
 
-function getX(col) {
-  return columnWidths.slice(0, col).reduce((a, b) => a + b, 0);
-}
-
-function getY(row) {
-  return rowHeights.slice(0, row).reduce((a, b) => a + b, 0);
-}
+// --- FUNÇÕES DE LÓGICA DO GRID ---
+function getX(col) { return columnWidths.slice(0, col).reduce((a, b) => a + b, 0); }
+function getY(row) { return rowHeights.slice(0, row).reduce((a, b) => a + b, 0); }
 
 function resetGridState(newRows, newCols) {
   numRows = newRows;
@@ -36,8 +34,8 @@ function resetGridState(newRows, newCols) {
   colsInput.value = newCols;
   rowsInput.value = newRows;
   gridState = Array(numRows).fill(null).map(() => Array(numCols).fill(null));
-  columnWidths = Array(numCols).fill(100);
-  rowHeights = Array(numRows).fill(100);
+  columnWidths = Array(numCols).fill(102);
+  rowHeights = Array(numRows).fill(102);
   updateGrid();
 }
 
@@ -50,21 +48,14 @@ function updateGrid() {
   }
   gridState.length = newRows;
   gridState.forEach(row => {
-    while (row.length < newCols) {
-      row.push(null);
-    }
+    while (row.length < newCols) { row.push(null); }
     row.length = newCols;
   });
-  
-  while (columnWidths.length < newCols) {
-    columnWidths.push(100);
-  }
-
+  while (columnWidths.length < newCols) { columnWidths.push(100); }
   numRows = newRows;
   numCols = newCols;
   columnWidths.length = newCols;
   rowHeights.length = newRows;
-
   redrawAll();
 }
 
@@ -73,7 +64,6 @@ function redrawAll() {
   overlay.innerHTML = "";
   labelsTop.innerHTML = "";
   labelsLeft.innerHTML = "";
-
   const totalWidth = columnWidths.reduce((a, b) => a + b, 0);
   const totalHeight = rowHeights.reduce((a, b) => a + b, 0);
   const lineWidth = 2;
@@ -94,9 +84,10 @@ function redrawAll() {
   
   for (let r = 0; r < numRows; r++) {
     for (let c = 0; c < numCols; c++) {
-      if (gridState[r][c]) {
-        insertComponent(r, c, gridState[r][c].type, false);
-      } else {
+      const cellState = gridState[r][c];
+      if (cellState && cellState.master) {
+        insertComponent(r, c, cellState, false);
+      } else if (!cellState) {
         createAddButton(r, c);
       }
     }
@@ -168,18 +159,117 @@ function showCustomModal(options) {
   });
 }
 
+// --- NOVA FUNÇÃO PARA O MENU DE OPÇÕES DE GIRO ---
+function showGiroOptionsMenu(r, c) {
+  const modal = document.getElementById('giro-options-modal-overlay');
+  const size1Btn = document.querySelector('[data-size="1"]');
+  const size2Btn = document.querySelector('[data-size="2"]');
+  const dirLeftBtn = document.querySelector('[data-direction="esquerda"]');
+  const dirRightBtn = document.querySelector('[data-direction="direita"]');
+  const transomOption = document.getElementById('giro-transom-option');
+  const transomCheckbox = document.getElementById('giro-transom-checkbox');
+  const confirmBtn = document.getElementById('giro-options-confirm-btn');
+  const cancelBtn = document.getElementById('giro-options-cancel-btn');
+
+  // Estado local para as opções
+  let selectedSize = 1;
+  let selectedDirection = 'direita';
+
+  return new Promise((resolve) => {
+    // 1. Lógica inicial e de reset
+    function setup() {
+      // Verifica se há espaço para a opção de 2 módulos
+      const hasSpaceAbove = r > 0 && gridState[r - 1][c] === null;
+      size2Btn.classList.toggle('disabled', !hasSpaceAbove);
+      size2Btn.disabled = !hasSpaceAbove;
+
+      // Reseta para o estado padrão
+      selectedSize = 1;
+      selectedDirection = 'direita';
+      
+      size1Btn.classList.add('selected');
+      size2Btn.classList.remove('selected');
+      dirLeftBtn.classList.remove('selected');
+      dirRightBtn.classList.add('selected');
+      
+      transomOption.style.display = 'block'; 
+      transomCheckbox.checked = false;
+    }
+
+    // 2. Funções de clique
+    const onSizeClick = (e) => {
+      const btn = e.target;
+      if (btn.disabled) return;
+      selectedSize = parseInt(btn.dataset.size);
+      size1Btn.classList.toggle('selected', selectedSize === 1);
+      size2Btn.classList.toggle('selected', selectedSize === 2);
+      // Mostra/esconde a opção da travessa
+      transomOption.style.display = 'block'; 
+    };
+
+    const onDirectionClick = (e) => {
+      selectedDirection = e.target.dataset.direction;
+      dirLeftBtn.classList.toggle('selected', selectedDirection === 'esquerda');
+      dirRightBtn.classList.toggle('selected', selectedDirection === 'direita');
+    };
+
+    // 3. Funções de fechar o modal
+    const onConfirm = () => {
+      const withTransom = transomCheckbox.checked;
+      closeModal();
+      resolve({
+        size: selectedSize,
+        direction: selectedDirection,
+        transom: withTransom,
+      });
+    };
+    
+    const onCancel = () => {
+      closeModal();
+      resolve(null); // Retorna nulo em caso de cancelamento
+    };
+
+    function closeModal() {
+      modal.style.display = 'none';
+      // Limpa os event listeners para evitar memory leaks
+      size1Btn.removeEventListener('click', onSizeClick);
+      size2Btn.removeEventListener('click', onSizeClick);
+      dirLeftBtn.removeEventListener('click', onDirectionClick);
+      dirRightBtn.removeEventListener('click', onDirectionClick);
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', onCancel);
+    }
+    
+    // 4. Adiciona os event listeners
+    size1Btn.addEventListener('click', onSizeClick);
+    size2Btn.addEventListener('click', onSizeClick);
+    dirLeftBtn.addEventListener('click', onDirectionClick);
+    dirRightBtn.addEventListener('click', onDirectionClick);
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', onCancel);
+    
+    // 5. Roda o setup inicial e mostra o modal
+    setup();
+    modal.style.display = 'flex';
+  });
+}
+
 // --- LABELS / TAMANHOS ---
 function generateLabels() {
+  labelsTop.innerHTML = '';
+  labelsLeft.innerHTML = '';
+  const borderWidth = 2;
   columnWidths.forEach((width, index) => {
     const label = document.createElement("div");
     label.innerText = String.fromCharCode(65 + index);
     label.style.width = `${width}px`;
     label.addEventListener("click", async () => {
+      const internalWidth = width - borderWidth;
       const result = await showCustomModal({
         title: 'Alterar Largura da Coluna',
         text: `Digite a nova largura para a coluna ${String.fromCharCode(65 + index)} (15-300px):`,
         inputType: 'number',
-        initialValue: width,
+        initialValue: internalWidth,
         confirmText: 'Alterar',
         cancelText: 'Cancelar'
       });
@@ -187,7 +277,7 @@ function generateLabels() {
       if (result !== false && result !== null && result !== '') {
         const newSize = parseInt(result);
         if (!isNaN(newSize) && newSize >= 15 && newSize <= 300) {
-          columnWidths[index] = newSize;
+          columnWidths[index] = newSize + borderWidth; 
           updateGrid();
         } else {
           showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300.', confirmText: 'OK' });
@@ -202,11 +292,12 @@ function generateLabels() {
     label.innerText = index + 1;
     label.style.height = `${height}px`;
     label.addEventListener("click", async () => {
+      const internalHeight = height - borderWidth;
       const result = await showCustomModal({
         title: 'Alterar Altura da Linha',
         text: `Digite a nova altura para a linha ${index + 1} (15-300px):`,
         inputType: 'number',
-        initialValue: height,
+        initialValue: internalHeight,
         confirmText: 'Alterar',
         cancelText: 'Cancelar'
       });
@@ -214,7 +305,7 @@ function generateLabels() {
       if (result !== false && result !== null && result !== '') {
         const newSize = parseInt(result);
         if (!isNaN(newSize) && newSize >= 15 && newSize <= 300) {
-          rowHeights[index] = newSize;
+          rowHeights[index] = newSize + borderWidth;
           updateGrid();
         } else {
           showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300.', confirmText: 'OK' });
@@ -253,82 +344,117 @@ function updateCroquiPosition() {
   const containerHeight = canvasContainer.clientHeight - 40;
   croquiWrapper.style.transform = 'none';
   if (croquiWidth > containerWidth) {
-  croquiWrapper.style.left = '0px';
+    croquiWrapper.style.left = '0px';
   } else {
-  croquiWrapper.style.left = `calc(50% - ${croquiWidth / 2}px)`;
+    croquiWrapper.style.left = `calc(50% - ${croquiWidth / 2}px)`;
   }
   if (croquiHeight > containerHeight) {
-  croquiWrapper.style.top = '0px';
+    croquiWrapper.style.top = '0px';
   } else {
-  croquiWrapper.style.top = `calc(50% - ${croquiHeight / 2}px)`;
+    croquiWrapper.style.top = `calc(50% - ${croquiHeight / 2}px)`;
   }
 }
 
 function createAddButton(r, c) {
+  const borderWidth = 2;
   const addBtn = document.createElement("div");
   addBtn.className = "add-btn";
-  addBtn.style.left = `${getX(c)}px`;
-  addBtn.style.top = `${getY(r)}px`;
-  addBtn.style.width = `${columnWidths[c]}px`;
-  addBtn.style.height = `${rowHeights[r]}px`;
+  addBtn.style.left = `${getX(c) + borderWidth}px`;
+  addBtn.style.top = `${getY(r) + borderWidth}px`;
+  addBtn.style.width = `${columnWidths[c] - borderWidth}px`;
+  addBtn.style.height = `${rowHeights[r] - borderWidth}px`;
   addBtn.innerText = "+";
   
   addBtn.addEventListener("click", (e) => showComponentMenu(e, r, c));
   addBtn.addEventListener("dragover", (e) => e.preventDefault());
   addBtn.addEventListener("dragenter", (e) => { e.preventDefault(); addBtn.classList.add("drag-over"); });
   addBtn.addEventListener("dragleave", () => addBtn.classList.remove("drag-over"));
-  addBtn.addEventListener("drop", (e) => {
+  addBtn.addEventListener("drop", async (e) => {
     e.preventDefault();
     addBtn.classList.remove("drag-over");
     const type = e.dataTransfer.getData("text/plain");
-    if (type) {
-      gridState[r][c] = { type: type };
-      updateGrid();
-    }
-  });
+
+    if (type === 'giro') {
+            const giroOptions = await showGiroOptionsMenu(r, c);
+            if (giroOptions) {
+                const newState = {
+                    type: `giro-${giroOptions.direction}`,
+                    master: true,
+                    spanY: giroOptions.size,
+                    transom: giroOptions.transom,
+                };
+                gridState[r][c] = newState;
+                if (newState.spanY === 2) {
+                    gridState[r - 1][c] = { occupiedBy: [r, c] };
+                }
+                redrawAll();
+            }
+        } else if (type) {
+            gridState[r][c] = { type: type, master: true };
+            redrawAll();
+        }
+    });
   overlay.appendChild(addBtn);
 }
 
-function insertComponent(r, c, type, shouldUpdateState = true) {
+function insertComponent(r, c, state, shouldUpdateState = true) {
   if (shouldUpdateState) {
-    gridState[r][c] = { type: type };
-    updateGrid();
+    gridState[r][c] = { ...state, master: true };
+    redrawAll();
     return;
   }
-  const left = getX(c);
-  const top = getY(r);
-  const width = columnWidths[c];
-  const height = rowHeights[r];
-  const comp = document.createElement("div");
-  comp.className = "component-placed";
-  comp.style.left = `${left}px`;
-  comp.style.top = `${top}px`;
-  comp.style.width = `${width}px`;
-  comp.style.height = `${height}px`;
-
-  if (type === "maxim-ar") {
-    comp.innerHTML = `<svg viewBox="-2 -2 ${width + 2} ${height + 2}"><path d="M0 0 L${width / 2} ${height} L${width} 0" stroke="black" stroke-width="2" fill="none"/></svg>`;
-  } else if (type === "veneziana") {
-  const lines = [];
-  const lineThickness = 1;
-  const lineGap = 8;
-  const gridLineThickness = 2;
-
-  const drawableHeight = height - gridLineThickness;
-  const numLines = Math.floor((drawableHeight + lineGap) / (lineThickness + lineGap));
-  const patternHeight = (numLines * lineThickness) + ((numLines - 1) * lineGap);
-  const visualAreaHeight = height - gridLineThickness;
-  const visualMargin = (visualAreaHeight - patternHeight) / 2;
   
-  let currentY = gridLineThickness + visualMargin;
+  const type = state.type;
+  let left = getX(c);
+  let top = getY(r);
+  let width = columnWidths[c];
+  let height = rowHeights[r];
+  let totalHeight = height;
+  const borderWidth = 2;
 
-  for (let i = 0; i < numLines; i++) {
-    lines.push(`<line x1="0" y1="${currentY}" x2="${width}" y2="${currentY}" stroke="black" stroke-width="1" />`);
-    currentY += lineThickness + lineGap;
+  if (state.type.startsWith('giro') && state.spanY === 2) {
+    top = getY(r - 1); 
+    totalHeight = height + rowHeights[r-1]; 
   }
   
-  comp.innerHTML = `<svg viewBox="0 0 ${width} ${height}"><g>${lines.join("")}</g></svg>`;
-}
+  const comp = document.createElement("div");
+  comp.className = "component-placed";
+  comp.style.left = `${left + borderWidth}px`; 
+  comp.style.top = `${top + borderWidth}px`;
+  comp.style.width = `${width - borderWidth}px`;
+  comp.style.height = `${totalHeight - borderWidth}px`;
+
+    const internalWidth = parseFloat(comp.style.width);
+    const internalHeight = parseFloat(comp.style.height);
+
+  if (type === "maxim-ar") {
+    comp.innerHTML = `<svg viewBox="0 0 ${internalWidth} ${internalHeight}">
+            <path d="M0 0 L${internalWidth / 2} ${internalHeight} L${internalWidth} 0" 
+                  stroke="black" stroke-width="2" fill="none"/>
+        </svg>`;
+}   else if (type === "veneziana") {
+    const lines = [];
+    const lineThickness = 1;
+    const desiredLineCycleHeight = 10;
+    const numLines = Math.max(1, Math.floor(internalHeight / desiredLineCycleHeight));
+    const totalGapSpace = internalHeight - (numLines * lineThickness);
+    const actualGap = totalGapSpace / (numLines + 1);
+    let currentY = actualGap + (lineThickness / 2);
+    for (let i = 0; i < numLines; i++) {
+        lines.push(`<line x1="0" y1="${currentY}" x2="${internalWidth}" y2="${currentY}" stroke="black" stroke-width="${lineThickness}" />`);
+        currentY += lineThickness + actualGap;
+    }
+    
+    comp.innerHTML = `<svg viewBox="0 0 ${internalWidth} ${internalHeight}"><g>${lines.join("")}</g></svg>`;
+  }  else if (type === 'giro-direita' || type === 'giro-esquerda') {
+    let path;
+    if (type === 'giro-direita') {
+      path = `M0 0 L${internalWidth} ${internalHeight / 2} L0 ${internalHeight}`;
+    } else { // giro-esquerda
+      path = `M${internalWidth} 0 L0 ${internalHeight / 2} L${internalWidth} ${internalHeight}`;
+    }
+    comp.innerHTML = `<svg viewBox="0 0 ${internalWidth} ${internalHeight}"><path d="${path}" stroke="black" stroke-width="2" fill="none"/></svg>`;
+  }
 
   const trash = document.createElement("button");
   trash.className = "trash-btn";
@@ -336,7 +462,10 @@ function insertComponent(r, c, type, shouldUpdateState = true) {
   trash.addEventListener("click", (e) => {
     e.stopPropagation();
     gridState[r][c] = null;
-    updateGrid();
+    if (state.type.startsWith('giro') && state.spanY === 2) {
+        gridState[r-1][c] = null;
+    }
+    redrawAll();
   });
   comp.addEventListener("dragover", (e) => e.preventDefault());
   comp.addEventListener("dragenter", (e) => { e.preventDefault(); comp.classList.add("hovering"); });
@@ -346,8 +475,21 @@ function insertComponent(r, c, type, shouldUpdateState = true) {
     comp.classList.remove("hovering");
     const newType = e.dataTransfer.getData("text/plain");
     if (newType) {
-      gridState[r][c] = { type: newType };
-      updateGrid();
+        if (newType === 'giro') {
+            // Se dropar um 'giro' em cima de um componente existente
+            if (r === 0 || (gridState[r-1][c] !== null && gridState[r-1][c].master !== true)) {
+                showCustomModal({ title: 'Aviso', text: 'Não é possível inserir o "giro" aqui. A célula superior está ocupada.', confirmText: 'OK'});
+                return;
+            }
+            gridState[r][c] = null; // Limpa o estado atual
+            if (type.startsWith('giro')) { gridState[r-1][c] = null; }
+            redrawAll();
+            showComponentMenu(e, r, c, true);
+        } else {
+            gridState[r][c] = { type: newType, master: true };
+            if (type.startsWith('giro')) { gridState[r-1][c] = null; }
+            redrawAll();
+        }
     }
   });
 
@@ -362,24 +504,79 @@ function insertComponent(r, c, type, shouldUpdateState = true) {
 
   comp.appendChild(trash);
   overlay.appendChild(comp);
+  // Cenário 1: Apagar a travessa do grid em uma porta de 2 módulos
+  if (state.type.startsWith('giro') && state.spanY === 2 && state.transom === false) {
+    const transomRemover = document.createElement("div");
+    transomRemover.style.position = 'absolute';
+    transomRemover.style.backgroundColor = 'white';
+    transomRemover.style.zIndex = '5';
+    transomRemover.style.top = `${getY(r)}px`;
+    transomRemover.style.left = `${getX(c) + borderWidth}px`;
+    transomRemover.style.width = `${width - borderWidth}px`;
+    transomRemover.style.height = `${borderWidth}px`;
+    overlay.appendChild(transomRemover);
+  }
+
+  // Cenário 2: Desenhar uma nova travessa em uma porta de 1 módulo
+  if (state.type.startsWith('giro') && state.spanY === 1 && state.transom === true) {
+    const newTransom = document.createElement("div");
+    newTransom.style.position = 'absolute';
+    newTransom.style.backgroundColor = 'black';
+    newTransom.style.zIndex = '5'; // Mesmo z-index do apagador
+    // Posiciona a nova linha preta no centro vertical do componente
+    newTransom.style.top = `${top + borderWidth + (internalHeight / 2) - (borderWidth / 2)}px`;
+    newTransom.style.left = `${left + borderWidth}px`;
+    newTransom.style.width = `${internalWidth}px`;
+    newTransom.style.height = `${borderWidth}px`;
+    overlay.appendChild(newTransom);
+  }
 }
 
-function showComponentMenu(e, r, c) {
+async function showComponentMenu(e, r, c) { // Adicionamos async aqui
   e.stopPropagation();
+  // Esta parte do HTML do menu não muda
   const svgMaximAr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 102 102"><path d="M1 1 L51 101 L101 1" stroke="black" stroke-width="2" fill="none"/></svg>`;
   const svgVeneziana = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g stroke="black" stroke-width="1"><line y1="5" x2="100" y2="5" x1="0"></line><line y1="15" x2="100" y2="15" x1="0"></line><line y1="25" x2="100" y2="25" x1="0"></line><line y1="35" x2="100" y2="35" x1="0"></line><line y1="45" x2="100" y2="45" x1="0"></line><line y1="55" x2="100" y2="55" x1="0"></line><line y1="65" x2="100" y2="65" x1="0"></line><line y1="75" x2="100" y2="75" x1="0"></line><line y1="85" x2="100" y2="85" x1="0"></line><line y1="95" x2="100" y2="95" x1="0"></line></g></svg>`;
-  menuPopup.innerHTML = `
-    <div class="option" data-select="maxim-ar" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgMaximAr)}');"></div>
-    <div class="option" data-select="veneziana" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgVeneziana)}');"></div>
+  const svgGiroIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M25 2 L75 50 L25 98" stroke="black" stroke-width="2" fill="none"/></svg>`;
+  const menuOptionsHTML = `
+      <div class="option" data-select="maxim-ar" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgMaximAr)}');"></div>
+      <div class="option" data-select="veneziana" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgVeneziana)}');"></div>
+      <div class="option" data-select="giro" style="background-image:url('data:image/svg+xml;utf8,${encodeURIComponent(svgGiroIcon)}');"></div>
   `;
+
+  menuPopup.innerHTML = menuOptionsHTML;
   menuPopup.style.display = "flex";
   menuPopup.style.left = `${e.clientX}px`;
   menuPopup.style.top = `${e.clientY}px`;
+  
   menuPopup.querySelectorAll(".option").forEach((opt) => {
-    opt.onclick = () => {
-      gridState[r][c] = { type: opt.dataset.select };
-      updateGrid();
-      menuPopup.style.display = "none";
+    opt.onclick = async () => { // Adicionamos async aqui
+      const selectedType = opt.dataset.select;
+      menuPopup.style.display = "none"; // Esconde o menu pequeno imediatamente
+
+      if (selectedType === 'giro') {
+        // --- MUDANÇA PRINCIPAL ---
+        // Chama o novo modal de opções e espera a resposta
+        const giroOptions = await showGiroOptionsMenu(r, c);
+        
+        if (giroOptions) { // Se o usuário confirmou
+          const newState = {
+            type: `giro-${giroOptions.direction}`,
+            master: true,
+            spanY: giroOptions.size,
+            transom: giroOptions.transom,
+          };
+          gridState[r][c] = newState;
+          if (newState.spanY === 2) {
+            gridState[r - 1][c] = { occupiedBy: [r, c] };
+          }
+          redrawAll();
+        }
+      } else {
+        // Lógica antiga para outros componentes
+        gridState[r][c] = { type: selectedType, master: true };
+        redrawAll();
+      }
     };
   });
 }
@@ -460,7 +657,7 @@ modalDownloadBtn.addEventListener('click', () => {
       filename = `ELEVFAC-${numCols}X${numRows}.png`;
     }
     if (!filename.toLowerCase().endsWith('.png')) {
-    filename += '.png';
+      filename += '.png';
     }
     const link = document.createElement('a');
     link.href = finalImage.src;
@@ -498,8 +695,9 @@ clearGridBtn.addEventListener("click", async () => {
     cancelText: 'Cancelar'
   });
   if (confirmed) {
-  resetGridState(parseInt(rowsInput.value), parseInt(colsInput.value));
-  }});
+    resetGridState(parseInt(rowsInput.value), parseInt(colsInput.value));
+  }
+});
 
 document.addEventListener("click", (e) => {
   if (!menuPopup.contains(e.target) && !e.target.classList.contains('add-btn')) {
@@ -517,5 +715,6 @@ function initializeDraggableComponents() {
   });
 }
 
+// --- INICIALIZAÇÃO ---
 resetGridState(numRows, numCols);
 initializeDraggableComponents();

@@ -1,0 +1,75 @@
+/* Corpo da página de atualizações */
+body.notes-page {
+    display: flex;
+    min-height: 100vh; 
+    padding: 20px;
+    background-color: var(--background-color);
+    overflow: auto;
+}
+
+.notes-container {
+    width: 100%;
+    background-color: var(--white);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 30px 40px;
+}
+
+.notes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+}
+
+.notes-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--orange); /* Título principal em laranja */
+}
+
+.back-button {
+    padding: 10px 20px;
+    background-color: var(--light-gray);
+    color: var(--dark-gray);
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.back-button:hover {
+    background-color: var(--dark-gray);
+    color: var(--white);
+    border-color: var(--dark-gray);
+}
+
+/* Estilização do conteúdo que virá do Markdown */
+#notes-content h1,
+#notes-content h2,
+#notes-content h3 {
+    color: var(--dark-gray);
+    margin-top: 24px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+#notes-content p {
+    line-height: 1.7;
+    color: var(--medium-gray);
+    margin-bottom: 16px;
+}
+
+#notes-content ol {
+    padding-left: 20px;
+}
+
+#notes-content li {
+    margin-bottom: 10px;
+    line-height: 1.6;
+    color: var(--dark-gray);
+}
