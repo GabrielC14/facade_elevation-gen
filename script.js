@@ -166,34 +166,30 @@ function showGiroOptionsMenu(r, c) {
   const size2Btn = document.querySelector('[data-size="2"]');
   const dirLeftBtn = document.querySelector('[data-direction="esquerda"]');
   const dirRightBtn = document.querySelector('[data-direction="direita"]');
-  const transomOption = document.getElementById('giro-transom-option');
-  const transomCheckbox = document.getElementById('giro-transom-checkbox');
+  const transomWithBtn = document.querySelector('[data-transom="true"]');
+  const transomWithoutBtn = document.querySelector('[data-transom="false"]');
   const confirmBtn = document.getElementById('giro-options-confirm-btn');
   const cancelBtn = document.getElementById('giro-options-cancel-btn');
 
   // Estado local para as opções
   let selectedSize = 1;
   let selectedDirection = 'direita';
+  let withTransom = false;
 
   return new Promise((resolve) => {
-    // 1. Lógica inicial e de reset
     function setup() {
-      // Verifica se há espaço para a opção de 2 módulos
       const hasSpaceAbove = r > 0 && gridState[r - 1][c] === null;
       size2Btn.classList.toggle('disabled', !hasSpaceAbove);
       size2Btn.disabled = !hasSpaceAbove;
-
-      // Reseta para o estado padrão
       selectedSize = 1;
       selectedDirection = 'direita';
-      
+      withTransom = false;
       size1Btn.classList.add('selected');
       size2Btn.classList.remove('selected');
       dirLeftBtn.classList.remove('selected');
       dirRightBtn.classList.add('selected');
-      
-      transomOption.style.display = 'block'; 
-      transomCheckbox.checked = false;
+      transomWithBtn.classList.remove('selected');
+      transomWithoutBtn.classList.add('selected');
     }
 
     // 2. Funções de clique
@@ -203,8 +199,6 @@ function showGiroOptionsMenu(r, c) {
       selectedSize = parseInt(btn.dataset.size);
       size1Btn.classList.toggle('selected', selectedSize === 1);
       size2Btn.classList.toggle('selected', selectedSize === 2);
-      // Mostra/esconde a opção da travessa
-      transomOption.style.display = 'block'; 
     };
 
     const onDirectionClick = (e) => {
@@ -213,9 +207,14 @@ function showGiroOptionsMenu(r, c) {
       dirRightBtn.classList.toggle('selected', selectedDirection === 'direita');
     };
 
+    const onTransomClick = (e) => {
+      withTransom = e.target.dataset.transom === 'true';
+      transomWithBtn.classList.toggle('selected', withTransom);
+      transomWithoutBtn.classList.toggle('selected', !withTransom);
+    };
+
     // 3. Funções de fechar o modal
     const onConfirm = () => {
-      const withTransom = transomCheckbox.checked;
       closeModal();
       resolve({
         size: selectedSize,
@@ -236,6 +235,8 @@ function showGiroOptionsMenu(r, c) {
       size2Btn.removeEventListener('click', onSizeClick);
       dirLeftBtn.removeEventListener('click', onDirectionClick);
       dirRightBtn.removeEventListener('click', onDirectionClick);
+      transomWithBtn.removeEventListener('click', onTransomClick);
+      transomWithoutBtn.removeEventListener('click', onTransomClick);
       confirmBtn.removeEventListener('click', onConfirm);
       cancelBtn.removeEventListener('click', onCancel);
     }
@@ -245,6 +246,8 @@ function showGiroOptionsMenu(r, c) {
     size2Btn.addEventListener('click', onSizeClick);
     dirLeftBtn.addEventListener('click', onDirectionClick);
     dirRightBtn.addEventListener('click', onDirectionClick);
+    transomWithBtn.addEventListener('click', onTransomClick);
+    transomWithoutBtn.addEventListener('click', onTransomClick);
     confirmBtn.addEventListener('click', onConfirm);
     cancelBtn.addEventListener('click', onCancel);
     
@@ -555,8 +558,6 @@ async function showComponentMenu(e, r, c) { // Adicionamos async aqui
       menuPopup.style.display = "none"; // Esconde o menu pequeno imediatamente
 
       if (selectedType === 'giro') {
-        // --- MUDANÇA PRINCIPAL ---
-        // Chama o novo modal de opções e espera a resposta
         const giroOptions = await showGiroOptionsMenu(r, c);
         
         if (giroOptions) { // Se o usuário confirmou

@@ -735,21 +735,6 @@ body {
   background-color: var(--light-gray);
 }
 
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-#giro-transom-checkbox {
-  width: 18px;
-  height: 18px;
-}
-
 #giro-options-cancel-btn, #giro-options-confirm-btn {
   flex-grow: 1;
 }

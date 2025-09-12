@@ -1,4 +1,4 @@
-# Notas de Atualização da Versão 1.0.2
+# Notas de Atualização da Versão 1.0.2 - 10/09/2025
 
 Aqui estão as principais mudanças e melhorias implementadas nesta versão:
 
@@ -17,5 +17,5 @@ Aqui estão as principais mudanças e melhorias implementadas nesta versão:
 
 ---
 
-### **Notas da Versão 1.0.1**
+### **Notas da Versão 1.0.1** - 05/08/2025
 * Lançamento inicial do aplicativo.
