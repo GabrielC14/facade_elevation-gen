@@ -1,6 +1,18 @@
-# Notas de Atualização da Versão 1.0.2 - 10/09/2025
+# Notas de Atualização da Versão 1.0.3 - 19/09/2025
 
 Aqui estão as principais mudanças e melhorias implementadas nesta versão:
+
+### ✨ Novas Funcionalidades
+1.  **Menu "+" melhorado:**
+    * Foi melhorado a aparência do menu "+", deixando do mesmo padrão que o menu lateral de componentes.
+2.  **Menu de componentes melhorado**
+    * Foi adicionado a descrição do item ao lado da sua imagem.
+
+### 🐛 Correções de Bugs
+1.  Corrigido bug onde as linhas novas inseridas estavam por padrão sendo inseridas com 98px.
+
+---
+### **Notas de Atualização da Versão 1.0.2 - 10/09/2025**
 
 ### ✨ Novas Funcionalidades
 1.  **Componente Porta de Giro:**
@@ -17,5 +29,5 @@ Aqui estão as principais mudanças e melhorias implementadas nesta versão:
 
 ---
 
-### **Notas da Versão 1.0.1** - 05/08/2025
+### **Notas de Atualização da Versão 1.0.1 - 05/08/2025**
 * Lançamento inicial do aplicativo.

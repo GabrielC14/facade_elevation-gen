@@ -44,14 +44,14 @@ function updateGrid() {
   const newCols = parseInt(colsInput.value);
   while (gridState.length < newRows) {
     gridState.push(Array(numCols).fill(null));
-    rowHeights.push(100);
+    rowHeights.push(102);
   }
   gridState.length = newRows;
   gridState.forEach(row => {
     while (row.length < newCols) { row.push(null); }
     row.length = newCols;
   });
-  while (columnWidths.length < newCols) { columnWidths.push(100); }
+  while (columnWidths.length < newCols) { columnWidths.push(102); }
   numRows = newRows;
   numCols = newCols;
   columnWidths.length = newCols;
