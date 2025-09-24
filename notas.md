@@ -30,4 +30,4 @@ Aqui estão as principais mudanças e melhorias implementadas nesta versão:
 ---
 
 ### **Notas de Atualização da Versão 1.0.1 - 05/08/2025**
-* Lançamento inicial do aplicativo.
+* Lançamento inicial do aplicativo
