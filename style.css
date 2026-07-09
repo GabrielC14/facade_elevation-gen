@@ -168,7 +168,11 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--light-gray);
+  background:
+    linear-gradient(rgba(222, 226, 230, 0.38) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(230, 222, 222, 0.38) 1px, transparent 1px),
+    var(--light-gray);
+  background-size: 24px 24px;
 }
 
 #bottom-bar {
