@@ -1,3 +1,10 @@
+# Notas de Atualização da Versão 1.0.4 - 09/07/2026
+
+Aqui estão as principais mudanças e melhorias implementadas nesta versão:
+
+### ✨ Mudanças
+1.  **Titulo e logo adicionado**
+
 # Notas de Atualização da Versão 1.0.3 - 19/09/2025
 
 Aqui estão as principais mudanças e melhorias implementadas nesta versão:
