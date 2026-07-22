@@ -16,17 +16,26 @@ const modalOverlay = document.getElementById("modal-overlay");
 const modalImageContainer = document.getElementById("modal-image-container");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
 const modalDownloadBtn = document.getElementById("modal-download-btn");
+const moduleSizePresetInput = document.getElementById("module-size-preset");
+const exportModeSelect = document.getElementById("export-mode");
+const insertModeStatus = document.getElementById("insert-mode-status");
 
 // --- ESTADO DA APLICAÇÃO ---
+const borderWidth = 2;
+const defaultModuleSizeCm = 100;
 let numRows = 3;
 let numCols = 5;
 let columnWidths = [];
 let rowHeights = [];
 let gridState = [];
+let activeInsertMode = null;
 
 // --- FUNÇÕES DE LÓGICA DO GRID ---
 function getX(col) { return columnWidths.slice(0, col).reduce((a, b) => a + b, 0); }
 function getY(row) { return rowHeights.slice(0, row).reduce((a, b) => a + b, 0); }
+function cmToGridSize(value) { return value + borderWidth; }
+function gridSizeToCm(value) { return Math.max(0, value - borderWidth); }
+function formatCm(value) { return `${gridSizeToCm(value)}cm`; }
 
 function resetGridState(newRows, newCols) {
   numRows = newRows;
@@ -34,8 +43,8 @@ function resetGridState(newRows, newCols) {
   colsInput.value = newCols;
   rowsInput.value = newRows;
   gridState = Array(numRows).fill(null).map(() => Array(numCols).fill(null));
-  columnWidths = Array(numCols).fill(102);
-  rowHeights = Array(numRows).fill(102);
+  columnWidths = Array(numCols).fill(cmToGridSize(defaultModuleSizeCm));
+  rowHeights = Array(numRows).fill(cmToGridSize(defaultModuleSizeCm));
   updateGrid();
 }
 
@@ -44,18 +53,57 @@ function updateGrid() {
   const newCols = parseInt(colsInput.value);
   while (gridState.length < newRows) {
     gridState.push(Array(numCols).fill(null));
-    rowHeights.push(102);
+    rowHeights.push(cmToGridSize(defaultModuleSizeCm));
   }
   gridState.length = newRows;
   gridState.forEach(row => {
     while (row.length < newCols) { row.push(null); }
     row.length = newCols;
   });
-  while (columnWidths.length < newCols) { columnWidths.push(102); }
+  while (columnWidths.length < newCols) { columnWidths.push(cmToGridSize(defaultModuleSizeCm)); }
   numRows = newRows;
   numCols = newCols;
   columnWidths.length = newCols;
   rowHeights.length = newRows;
+  redrawAll();
+}
+
+function rebuildOccupiedCells() {
+  gridState.forEach((row) => {
+    row.forEach((cell, index) => {
+      if (cell && !cell.master) {
+        row[index] = null;
+      }
+    });
+  });
+
+  for (let r = 0; r < numRows; r++) {
+    for (let c = 0; c < numCols; c++) {
+      const cell = gridState[r][c];
+      if (cell && cell.master && cell.type.startsWith('giro') && cell.spanY === 2 && r > 0) {
+        gridState[r - 1][c] = { occupiedBy: [r, c] };
+      }
+    }
+  }
+}
+
+function insertColumnAt(index) {
+  const columnIndex = Math.max(0, Math.min(index, numCols));
+  gridState.forEach((row) => row.splice(columnIndex, 0, null));
+  columnWidths.splice(columnIndex, 0, cmToGridSize(defaultModuleSizeCm));
+  numCols++;
+  colsInput.value = numCols;
+  rebuildOccupiedCells();
+  redrawAll();
+}
+
+function insertRowAt(index) {
+  const rowIndex = Math.max(0, Math.min(index, numRows));
+  gridState.splice(rowIndex, 0, Array(numCols).fill(null));
+  rowHeights.splice(rowIndex, 0, cmToGridSize(defaultModuleSizeCm));
+  numRows++;
+  rowsInput.value = numRows;
+  rebuildOccupiedCells();
   redrawAll();
 }
 
@@ -258,19 +306,46 @@ function showGiroOptionsMenu(r, c) {
 }
 
 // --- LABELS / TAMANHOS ---
+function createLabelInsertButton(className, title, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `label-insert-btn ${className}`;
+  button.title = title;
+  button.setAttribute('aria-label', title);
+  button.textContent = "+";
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
 function generateLabels() {
   labelsTop.innerHTML = '';
   labelsLeft.innerHTML = '';
-  const borderWidth = 2;
   columnWidths.forEach((width, index) => {
     const label = document.createElement("div");
-    label.innerText = String.fromCharCode(65 + index);
+    const labelText = String.fromCharCode(65 + index);
+    label.title = `Coluna ${labelText}: ${formatCm(width)}`;
+    label.innerHTML = `<span class="label-code">${labelText}</span><span class="label-measure">${formatCm(width)}</span>`;
     label.style.width = `${width}px`;
+    if (index === 0) {
+      label.appendChild(createLabelInsertButton(
+        'insert-col-before',
+        `Inserir coluna antes de ${labelText}`,
+        () => insertColumnAt(index)
+      ));
+    }
+    label.appendChild(createLabelInsertButton(
+      'insert-col-after',
+      `Inserir coluna depois de ${labelText}`,
+      () => insertColumnAt(index + 1)
+    ));
     label.addEventListener("click", async () => {
       const internalWidth = width - borderWidth;
       const result = await showCustomModal({
         title: 'Alterar Largura da Coluna',
-        text: `Digite a nova largura para a coluna ${String.fromCharCode(65 + index)} (15-300px):`,
+        text: `Digite a nova largura para a coluna ${String.fromCharCode(65 + index)} (15-300 cm):`,
         inputType: 'number',
         initialValue: internalWidth,
         confirmText: 'Alterar',
@@ -280,10 +355,10 @@ function generateLabels() {
       if (result !== false && result !== null && result !== '') {
         const newSize = parseInt(result);
         if (!isNaN(newSize) && newSize >= 15 && newSize <= 300) {
-          columnWidths[index] = newSize + borderWidth; 
+          columnWidths[index] = cmToGridSize(newSize); 
           updateGrid();
         } else {
-          showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300.', confirmText: 'OK' });
+          showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300 cm.', confirmText: 'OK' });
         }
       }
     });
@@ -292,13 +367,27 @@ function generateLabels() {
 
   rowHeights.forEach((height, index) => {
     const label = document.createElement("div");
-    label.innerText = index + 1;
+    const labelText = index + 1;
+    label.title = `Linha ${labelText}: ${formatCm(height)}`;
+    label.innerHTML = `<span class="label-code">${labelText}</span><span class="label-measure">${formatCm(height)}</span>`;
     label.style.height = `${height}px`;
+    if (index === 0) {
+      label.appendChild(createLabelInsertButton(
+        'insert-row-before',
+        `Inserir linha antes de ${labelText}`,
+        () => insertRowAt(index)
+      ));
+    }
+    label.appendChild(createLabelInsertButton(
+      'insert-row-after',
+      `Inserir linha depois de ${labelText}`,
+      () => insertRowAt(index + 1)
+    ));
     label.addEventListener("click", async () => {
       const internalHeight = height - borderWidth;
       const result = await showCustomModal({
         title: 'Alterar Altura da Linha',
-        text: `Digite a nova altura para a linha ${index + 1} (15-300px):`,
+        text: `Digite a nova altura para a linha ${index + 1} (15-300 cm):`,
         inputType: 'number',
         initialValue: internalHeight,
         confirmText: 'Alterar',
@@ -308,10 +397,10 @@ function generateLabels() {
       if (result !== false && result !== null && result !== '') {
         const newSize = parseInt(result);
         if (!isNaN(newSize) && newSize >= 15 && newSize <= 300) {
-          rowHeights[index] = newSize + borderWidth;
+          rowHeights[index] = cmToGridSize(newSize);
           updateGrid();
         } else {
-          showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300.', confirmText: 'OK' });
+          showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300 cm.', confirmText: 'OK' });
         }
       }
     });
@@ -358,45 +447,139 @@ function updateCroquiPosition() {
   }
 }
 
+function getComponentName(type) {
+  const names = {
+    'maxim-ar': 'Maxim-ar',
+    veneziana: 'Veneziana',
+    giro: 'Porta de Giro'
+  };
+  return names[type] || type;
+}
+
+function updateInsertModeStatus() {
+  document.querySelectorAll("#sidebar .component").forEach((component) => {
+    component.classList.toggle('selected', activeInsertMode?.type === component.dataset.type);
+  });
+
+  if (!activeInsertMode) {
+    insertModeStatus.classList.remove('visible');
+    insertModeStatus.innerHTML = '';
+    return;
+  }
+
+  const scopeText = activeInsertMode.scope === 'row' ? 'Clique em uma linha para preencher.' : 'Clique em um quadro vazio.';
+  insertModeStatus.innerHTML = `
+    <strong>${getComponentName(activeInsertMode.type)}</strong><br>
+    ${scopeText}
+    <button type="button" id="cancel-insert-mode-btn">Cancelar</button>
+  `;
+  insertModeStatus.classList.add('visible');
+  document.getElementById('cancel-insert-mode-btn').addEventListener('click', () => clearInsertMode());
+}
+
+function setInsertMode(type, scope) {
+  activeInsertMode = { type, scope };
+  menuPopup.style.display = "none";
+  menuPopup.classList.remove('insert-mode-menu');
+  updateInsertModeStatus();
+  redrawAll();
+}
+
+function clearInsertMode(shouldRedraw = true) {
+  activeInsertMode = null;
+  updateInsertModeStatus();
+  if (shouldRedraw) {
+    redrawAll();
+  }
+}
+
+function fillRowWithComponent(row, type) {
+  let insertedCount = 0;
+  for (let c = 0; c < numCols; c++) {
+    if (!gridState[row][c]) {
+      gridState[row][c] = { type, master: true };
+      insertedCount++;
+    }
+  }
+  return insertedCount;
+}
+
+async function insertFromActiveMode(r, c) {
+  if (!activeInsertMode) return false;
+
+  const { type, scope } = activeInsertMode;
+  if (scope === 'row') {
+    const insertedCount = fillRowWithComponent(r, type);
+    clearInsertMode(false);
+    redrawAll();
+    if (insertedCount === 0) {
+      showCustomModal({ title: 'Linha ocupada', text: 'Essa linha não possui quadros vazios para inserir o componente.', confirmText: 'OK' });
+    }
+    return true;
+  }
+
+  if (type === 'giro') {
+    const giroOptions = await showGiroOptionsMenu(r, c);
+    clearInsertMode(false);
+    if (giroOptions) {
+      const newState = {
+        type: `giro-${giroOptions.direction}`,
+        master: true,
+        spanY: giroOptions.size,
+        transom: giroOptions.transom,
+      };
+      gridState[r][c] = newState;
+      if (newState.spanY === 2) {
+        gridState[r - 1][c] = { occupiedBy: [r, c] };
+      }
+    }
+    redrawAll();
+    return true;
+  }
+
+  gridState[r][c] = { type, master: true };
+  clearInsertMode(false);
+  redrawAll();
+  return true;
+}
+
+function highlightRowTargets(row, shouldHighlight) {
+  document.querySelectorAll(`.add-btn[data-row="${row}"]`).forEach((button) => {
+    button.classList.toggle('insert-row-target', shouldHighlight);
+  });
+}
+
 function createAddButton(r, c) {
   const borderWidth = 2;
   const addBtn = document.createElement("div");
   addBtn.className = "add-btn";
+  addBtn.dataset.row = r;
+  addBtn.dataset.col = c;
   addBtn.style.left = `${getX(c) + borderWidth}px`;
   addBtn.style.top = `${getY(r) + borderWidth}px`;
   addBtn.style.width = `${columnWidths[c] - borderWidth}px`;
   addBtn.style.height = `${rowHeights[r] - borderWidth}px`;
   addBtn.innerText = "+";
   
-  addBtn.addEventListener("click", (e) => showComponentMenu(e, r, c));
-  addBtn.addEventListener("dragover", (e) => e.preventDefault());
-  addBtn.addEventListener("dragenter", (e) => { e.preventDefault(); addBtn.classList.add("drag-over"); });
-  addBtn.addEventListener("dragleave", () => addBtn.classList.remove("drag-over"));
-  addBtn.addEventListener("drop", async (e) => {
-    e.preventDefault();
-    addBtn.classList.remove("drag-over");
-    const type = e.dataTransfer.getData("text/plain");
+  if (activeInsertMode) {
+    addBtn.classList.add('insert-target');
+  }
 
-    if (type === 'giro') {
-            const giroOptions = await showGiroOptionsMenu(r, c);
-            if (giroOptions) {
-                const newState = {
-                    type: `giro-${giroOptions.direction}`,
-                    master: true,
-                    spanY: giroOptions.size,
-                    transom: giroOptions.transom,
-                };
-                gridState[r][c] = newState;
-                if (newState.spanY === 2) {
-                    gridState[r - 1][c] = { occupiedBy: [r, c] };
-                }
-                redrawAll();
-            }
-        } else if (type) {
-            gridState[r][c] = { type: type, master: true };
-            redrawAll();
-        }
-    });
+  addBtn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (await insertFromActiveMode(r, c)) return;
+    showComponentMenu(e, r, c);
+  });
+  addBtn.addEventListener("mouseenter", () => {
+    if (activeInsertMode?.scope === 'row') {
+      highlightRowTargets(r, true);
+    }
+  });
+  addBtn.addEventListener("mouseleave", () => {
+    if (activeInsertMode?.scope === 'row') {
+      highlightRowTargets(r, false);
+    }
+  });
   overlay.appendChild(addBtn);
 }
 
@@ -537,6 +720,7 @@ function insertComponent(r, c, state, shouldUpdateState = true) {
 
 async function showComponentMenu(e, r, c) { // Adicionamos async aqui
   e.stopPropagation();
+  menuPopup.classList.remove('insert-mode-menu');
   // Esta parte do HTML do menu não muda
   const svgMaximAr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 102 102"><path d="M1 1 L51 101 L101 1" stroke="black" stroke-width="2" fill="none"/></svg>`;
   const svgVeneziana = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g stroke="black" stroke-width="1"><line y1="5" x2="100" y2="5" x1="0"></line><line y1="15" x2="100" y2="15" x1="0"></line><line y1="25" x2="100" y2="25" x1="0"></line><line y1="35" x2="100" y2="35" x1="0"></line><line y1="45" x2="100" y2="45" x1="0"></line><line y1="55" x2="100" y2="55" x1="0"></line><line y1="65" x2="100" y2="65" x1="0"></line><line y1="75" x2="100" y2="75" x1="0"></line><line y1="85" x2="100" y2="85" x1="0"></line><line y1="95" x2="100" y2="95" x1="0"></line></g></svg>`;
@@ -582,72 +766,187 @@ async function showComponentMenu(e, r, c) { // Adicionamos async aqui
   });
 }
 
+function showInsertModeMenu(e, type) {
+  e.stopPropagation();
+  menuPopup.classList.add('insert-mode-menu');
+  menuPopup.innerHTML = `
+    <button type="button" class="insert-mode-option" data-scope="cell">Selecionar quadro a ser inserido</button>
+    <button type="button" class="insert-mode-option" data-scope="row">Selecionar linha a ser inserida</button>
+  `;
+  menuPopup.style.display = "flex";
+  menuPopup.style.left = `${e.clientX}px`;
+  menuPopup.style.top = `${e.clientY}px`;
+
+  menuPopup.querySelectorAll(".insert-mode-option").forEach((option) => {
+    option.addEventListener('click', (event) => {
+      event.stopPropagation();
+      setInsertMode(type, option.dataset.scope);
+    });
+  });
+}
+
 // --- LÓGICA DO MODAL E EXPORTAÇÃO ---
+function drawDimensionLine(ctx, x1, y1, x2, y2, label, orientation, options = {}) {
+  const bracketSize = options.bracketSize || 16;
+  const labelOffset = options.labelOffset || 18;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+
+  if (orientation === 'horizontal') {
+    ctx.moveTo(x1, y1 - bracketSize / 2);
+    ctx.lineTo(x1, y1 + bracketSize / 2);
+    ctx.moveTo(x2, y2 - bracketSize / 2);
+    ctx.lineTo(x2, y2 + bracketSize / 2);
+  } else {
+    ctx.moveTo(x1 - bracketSize / 2, y1);
+    ctx.lineTo(x1 + bracketSize / 2, y1);
+    ctx.moveTo(x2 - bracketSize / 2, y2);
+    ctx.lineTo(x2 + bracketSize / 2, y2);
+  }
+
+  ctx.stroke();
+
+  if (orientation === 'horizontal') {
+    ctx.textAlign = 'center';
+    ctx.fillText(label, (x1 + x2) / 2, y1 + labelOffset, options.maxTextWidth || Math.abs(x2 - x1));
+  } else {
+    ctx.textAlign = 'left';
+    ctx.fillText(label, x1 + labelOffset, (y1 + y2) / 2, options.maxTextWidth || 76);
+  }
+}
+
+function drawSimpleDimensions(ctx, baseCanvas, layout) {
+  ctx.font = 'bold 18px sans-serif';
+  const hX = layout.paddingLeft + baseCanvas.width + layout.cotaOffset;
+  const hYStart = layout.paddingTop - layout.espacoExtra;
+  const hYEnd = layout.paddingTop + baseCanvas.height + layout.espacoExtra;
+  drawDimensionLine(ctx, hX, hYStart, hX, hYEnd, 'H', 'vertical', { bracketSize: 20, labelOffset: 15 });
+
+  const lY = layout.paddingTop + baseCanvas.height + layout.cotaOffset;
+  const lXStart = layout.paddingLeft - layout.espacoExtra;
+  const lXEnd = layout.paddingLeft + baseCanvas.width + layout.espacoExtra;
+  drawDimensionLine(ctx, lXStart, lY, lXEnd, lY, 'L', 'horizontal', { bracketSize: 20, labelOffset: 20 });
+}
+
+function drawDetailedDimensions(ctx, baseCanvas, layout) {
+  ctx.font = 'bold 12px sans-serif';
+  const totalOffset = 86;
+  const detailX = layout.paddingLeft + baseCanvas.width + layout.cotaOffset;
+  const detailY = layout.paddingTop + baseCanvas.height + layout.cotaOffset;
+
+  columnWidths.forEach((width, index) => {
+    const x1 = layout.paddingLeft + getX(index);
+    const x2 = x1 + width;
+    drawDimensionLine(ctx, x1, detailY, x2, detailY, formatCm(width), 'horizontal', {
+      bracketSize: 14,
+      labelOffset: 17,
+      maxTextWidth: Math.max(14, width - 4)
+    });
+  });
+
+  rowHeights.forEach((height, index) => {
+    const y1 = layout.paddingTop + getY(index);
+    const y2 = y1 + height;
+    drawDimensionLine(ctx, detailX, y1, detailX, y2, formatCm(height), 'vertical', {
+      bracketSize: 14,
+      labelOffset: 8,
+      maxTextWidth: 72
+    });
+  });
+
+  ctx.font = 'bold 14px sans-serif';
+  const totalWidthCm = columnWidths.reduce((sum, width) => sum + gridSizeToCm(width), 0);
+  const totalHeightCm = rowHeights.reduce((sum, height) => sum + gridSizeToCm(height), 0);
+  drawDimensionLine(
+    ctx,
+    layout.paddingLeft - layout.espacoExtra,
+    layout.paddingTop + baseCanvas.height + totalOffset,
+    layout.paddingLeft + baseCanvas.width + layout.espacoExtra,
+    layout.paddingTop + baseCanvas.height + totalOffset,
+    `L: ${totalWidthCm}cm`,
+    'horizontal',
+    { bracketSize: 18, labelOffset: 20 }
+  );
+  drawDimensionLine(
+    ctx,
+    layout.paddingLeft + baseCanvas.width + totalOffset,
+    layout.paddingTop - layout.espacoExtra,
+    layout.paddingLeft + baseCanvas.width + totalOffset,
+    layout.paddingTop + baseCanvas.height + layout.espacoExtra,
+    `H: ${totalHeightCm}cm`,
+    'vertical',
+    { bracketSize: 18, labelOffset: 12 }
+  );
+}
+
+function createExportCanvas(baseCanvas, mode) {
+  const finalCanvas = document.createElement('canvas');
+  const ctx = finalCanvas.getContext('2d');
+  const marcoRespiro = 1;
+  const marcoEspessura = 3;
+  const espacoExtra = marcoRespiro + marcoEspessura;
+  const isDetailed = mode === 'detailed';
+  const layout = {
+    espacoExtra,
+    paddingTop: 50 + espacoExtra,
+    paddingLeft: 50 + espacoExtra,
+    paddingBottom: (isDetailed ? 130 : 70) + espacoExtra,
+    paddingRight: (isDetailed ? 210 : 70) + espacoExtra,
+    cotaOffset: 22
+  };
+
+  finalCanvas.width = layout.paddingLeft + baseCanvas.width + layout.paddingRight;
+  finalCanvas.height = layout.paddingTop + baseCanvas.height + layout.paddingBottom;
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+  ctx.fillStyle = 'black';
+  ctx.fillRect(layout.paddingLeft - espacoExtra, layout.paddingTop - espacoExtra, baseCanvas.width + (espacoExtra * 2), baseCanvas.height + (espacoExtra * 2));
+  ctx.fillStyle = 'white';
+  ctx.fillRect(layout.paddingLeft - marcoRespiro, layout.paddingTop - marcoRespiro, baseCanvas.width + (marcoRespiro * 2), baseCanvas.height + (marcoRespiro * 2));
+  ctx.drawImage(baseCanvas, layout.paddingLeft, layout.paddingTop);
+
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'black';
+  ctx.lineWidth = 2;
+  ctx.textBaseline = 'middle';
+
+  if (isDetailed) {
+    drawDetailedDimensions(ctx, baseCanvas, layout);
+  } else {
+    drawSimpleDimensions(ctx, baseCanvas, layout);
+  }
+
+  return finalCanvas;
+}
+
+let currentPreviewBaseCanvas = null;
+
+function renderExportPreview(mode) {
+  if (!currentPreviewBaseCanvas) return;
+  const finalCanvas = createExportCanvas(currentPreviewBaseCanvas, mode);
+  const finalImage = new Image();
+  finalImage.src = finalCanvas.toDataURL('image/png');
+  modalImageContainer.innerHTML = '';
+  modalImageContainer.appendChild(finalImage);
+
+  const filenameInput = document.getElementById('filename-input');
+  const suffix = mode === 'detailed' ? 'COTADO' : 'APRESENTACAO';
+  filenameInput.value = `ELEVFAC-${numCols}X${numRows}-${suffix}.png`;
+}
+
 generateBtn.addEventListener("click", () => {
   const gridElement = document.getElementById("grid-container");
+  const mode = exportModeSelect.value;
   html2canvas(gridElement).then(baseCanvas => {
-    const finalCanvas = document.createElement('canvas');
-    const ctx = finalCanvas.getContext('2d');
-    const marcoRespiro = 1;
-    const marcoEspessura = 3;
-    const espacoExtra = marcoRespiro + marcoEspessura;
-    const paddingTop = 50 + espacoExtra;
-    const paddingLeft = 50 + espacoExtra;
-    const paddingBottom = 70 + espacoExtra;
-    const paddingRight = 70 + espacoExtra;
-    const cotaOffset = 20;
-    const cotaBracketSize = 20;
-    finalCanvas.width = paddingLeft + baseCanvas.width + paddingRight;
-    finalCanvas.height = paddingTop + baseCanvas.height + paddingBottom;
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-    ctx.fillStyle = 'black';
-    ctx.fillRect(paddingLeft - espacoExtra, paddingTop - espacoExtra, baseCanvas.width + (espacoExtra * 2), baseCanvas.height + (espacoExtra * 2));
-    ctx.fillStyle = 'white';
-    ctx.fillRect(paddingLeft - marcoRespiro, paddingTop - marcoRespiro, baseCanvas.width + (marcoRespiro * 2), baseCanvas.height + (marcoRespiro * 2));
-    ctx.drawImage(baseCanvas, paddingLeft, paddingTop);
-    ctx.strokeStyle = 'black';
-    ctx.fillStyle = 'black';
-    ctx.lineWidth = 2;
-    ctx.font = 'bold 18px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const h_x = paddingLeft + baseCanvas.width + cotaOffset;
-    const h_y_start = paddingTop - espacoExtra;
-    const h_y_end = paddingTop + baseCanvas.height + espacoExtra;
-    ctx.beginPath();
-    ctx.moveTo(h_x, h_y_start);
-    ctx.lineTo(h_x, h_y_end);
-    ctx.moveTo(h_x - cotaBracketSize / 2, h_y_start);
-    ctx.lineTo(h_x + cotaBracketSize / 2, h_y_start);
-    ctx.moveTo(h_x - cotaBracketSize / 2, h_y_end);
-    ctx.lineTo(h_x + cotaBracketSize / 2, h_y_end);
-    ctx.stroke();
-    ctx.fillText('H', h_x + 15, paddingTop + baseCanvas.height / 2);
-    const l_y = paddingTop + baseCanvas.height + cotaOffset;
-    const l_x_start = paddingLeft - espacoExtra;
-    const l_x_end = paddingLeft + baseCanvas.width + espacoExtra;
-    ctx.beginPath();
-    ctx.moveTo(l_x_start, l_y);
-    ctx.lineTo(l_x_end, l_y);
-    ctx.moveTo(l_x_start, l_y - cotaBracketSize / 2);
-    ctx.lineTo(l_x_start, l_y + cotaBracketSize / 2);
-    ctx.moveTo(l_x_end, l_y - cotaBracketSize / 2);
-    ctx.lineTo(l_x_end, l_y + cotaBracketSize / 2);
-    ctx.stroke();
-    ctx.fillText('L', paddingLeft + baseCanvas.width / 2, l_y + 20);
-    const finalImage = new Image();
-    finalImage.src = finalCanvas.toDataURL('image/png');
-    modalImageContainer.innerHTML = '';
-    modalImageContainer.appendChild(finalImage);
-    const filenameInput = document.getElementById('filename-input');
-    const defaultFilename = `ELEVFAC-${numCols}X${numRows}.png`;
-    filenameInput.value = defaultFilename;
+    currentPreviewBaseCanvas = baseCanvas;
+    renderExportPreview(mode);
     modalOverlay.style.display = 'flex';
   });
 });
 modalCancelBtn.addEventListener('click', () => {
   modalOverlay.style.display = 'none';
+  currentPreviewBaseCanvas = null;
 });
 modalDownloadBtn.addEventListener('click', () => {
   const finalImage = modalImageContainer.querySelector('img');
@@ -666,9 +965,32 @@ modalDownloadBtn.addEventListener('click', () => {
     link.click();
   }
   modalOverlay.style.display = 'none';
+  currentPreviewBaseCanvas = null;
+});
+
+exportModeSelect.addEventListener('change', () => {
+  renderExportPreview(exportModeSelect.value);
 });
 
 // --- EVENTOS GERAIS ---
+function applyPresetSize(target) {
+  const newSize = parseInt(moduleSizePresetInput.value);
+  if (isNaN(newSize) || newSize < 15 || newSize > 300) {
+    showCustomModal({ title: 'Erro', text: 'Por favor, insira uma medida padrão entre 15 e 300 cm.', confirmText: 'OK' });
+    return;
+  }
+
+  if (target === 'cols' || target === 'all') {
+    columnWidths = columnWidths.map(() => cmToGridSize(newSize));
+  }
+
+  if (target === 'rows' || target === 'all') {
+    rowHeights = rowHeights.map(() => cmToGridSize(newSize));
+  }
+
+  redrawAll();
+}
+
 document.getElementById('controls').addEventListener('click', (e) => {
   if (e.target.matches('.stepper-btn')) {
     const action = e.target.dataset.action;
@@ -684,6 +1006,10 @@ document.getElementById('controls').addEventListener('click', (e) => {
       targetInput.value = value;
       targetInput.dispatchEvent(new Event('change'));
     }
+  }
+
+  if (e.target.matches('[data-apply-size]')) {
+    applyPresetSize(e.target.dataset.applySize);
   }
 });
 colsInput.addEventListener("change", updateGrid);
@@ -703,19 +1029,30 @@ clearGridBtn.addEventListener("click", async () => {
 document.addEventListener("click", (e) => {
   if (!menuPopup.contains(e.target) && !e.target.classList.contains('add-btn')) {
     menuPopup.style.display = "none";
+    menuPopup.classList.remove('insert-mode-menu');
   }
 });
 
-function initializeDraggableComponents() {
+document.addEventListener("keydown", (e) => {
+  if (e.key === 'Escape' && activeInsertMode) {
+    clearInsertMode();
+  }
+});
+
+function initializeSidebarComponents() {
   const components = document.querySelectorAll("#sidebar .component");
   components.forEach(component => {
-    component.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("text/plain", component.dataset.type);
-      e.dataTransfer.effectAllowed = "copy";
+    component.addEventListener("click", (e) => {
+      const type = component.dataset.type;
+      if (type === 'maxim-ar' || type === 'veneziana') {
+        showInsertModeMenu(e, type);
+      } else {
+        setInsertMode(type, 'cell');
+      }
     });
   });
 }
 
 // --- INICIALIZAÇÃO ---
 resetGridState(numRows, numCols);
-initializeDraggableComponents();
+initializeSidebarComponents();
