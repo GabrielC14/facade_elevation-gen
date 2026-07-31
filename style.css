@@ -552,9 +552,59 @@ body {
   transition: opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
+.label-delete-btn {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
+  border: 1px solid #f3b3b3;
+  border-radius: 50%;
+  background: var(--white);
+  color: #c92a2a;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 13px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 31;
+  transition: opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.label-edit-btn {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--medium-gray);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 31;
+  transition: opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
 #labels-top:hover .label-insert-btn,
 #labels-left:hover .label-insert-btn,
-.label-insert-btn:focus {
+#labels-top:hover .label-delete-btn,
+#labels-left:hover .label-delete-btn,
+#labels-top:hover .label-edit-btn,
+#labels-left:hover .label-edit-btn,
+.label-insert-btn:focus,
+.label-delete-btn:focus,
+.label-edit-btn:focus {
   opacity: 1;
   pointer-events: auto;
 }
@@ -563,6 +613,36 @@ body {
   background: var(--orange);
   border-color: var(--orange);
   color: var(--white);
+}
+
+.label-delete-btn:hover {
+  background: #c92a2a;
+  border-color: #c92a2a;
+  color: var(--white);
+}
+
+.label-edit-btn:hover {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: var(--white);
+}
+
+#labels-top .label-edit-btn {
+  left: 14px;
+}
+
+#labels-top .label-delete-btn {
+  right: 14px;
+}
+
+#labels-top .narrow-column-label .label-edit-btn {
+  left: calc(50% - 18px);
+  top: -10px;
+}
+
+#labels-top .narrow-column-label .label-delete-btn {
+  right: calc(50% - 18px);
+  top: -10px;
 }
 
 .insert-col-before {

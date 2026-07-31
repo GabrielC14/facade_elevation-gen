@@ -23,6 +23,8 @@ const insertModeStatus = document.getElementById("insert-mode-status");
 // --- ESTADO DA APLICAÇÃO ---
 const borderWidth = 2;
 const defaultModuleSizeCm = 100;
+const minModuleSizeCm = 15;
+const maxModuleSizeCm = 400;
 let numRows = 3;
 let numCols = 5;
 let columnWidths = [];
@@ -103,6 +105,84 @@ function insertRowAt(index) {
   rowHeights.splice(rowIndex, 0, cmToGridSize(defaultModuleSizeCm));
   numRows++;
   rowsInput.value = numRows;
+  rebuildOccupiedCells();
+  redrawAll();
+}
+
+function clearCellComponentAt(row, col) {
+  const cell = gridState[row]?.[col];
+  if (!cell) return;
+
+  if (cell.master) {
+    if (cell.type.startsWith('giro') && cell.spanY === 2 && row > 0) {
+      gridState[row - 1][col] = null;
+    }
+    gridState[row][col] = null;
+    return;
+  }
+
+  if (cell.occupiedBy) {
+    const [masterRow, masterCol] = cell.occupiedBy;
+    if (gridState[masterRow]?.[masterCol]) {
+      gridState[masterRow][masterCol] = null;
+    }
+    gridState[row][col] = null;
+  }
+}
+
+async function deleteColumnAt(index) {
+  if (numCols <= 1) {
+    showCustomModal({ title: 'Aviso', text: 'O croqui precisa ter pelo menos uma coluna.', confirmText: 'OK' });
+    return;
+  }
+
+  const labelText = String.fromCharCode(65 + index);
+  const confirmed = await showCustomModal({
+    title: `Excluir Coluna ${labelText}`,
+    text: 'Componentes posicionados nessa coluna serão removidos. Deseja continuar?',
+    confirmText: 'Excluir',
+    cancelText: 'Cancelar'
+  });
+
+  if (!confirmed) return;
+
+  for (let r = 0; r < numRows; r++) {
+    clearCellComponentAt(r, index);
+  }
+
+  gridState.forEach((row) => row.splice(index, 1));
+  columnWidths.splice(index, 1);
+  numCols--;
+  colsInput.value = numCols;
+  clearInsertMode(false);
+  rebuildOccupiedCells();
+  redrawAll();
+}
+
+async function deleteRowAt(index) {
+  if (numRows <= 1) {
+    showCustomModal({ title: 'Aviso', text: 'O croqui precisa ter pelo menos uma linha.', confirmText: 'OK' });
+    return;
+  }
+
+  const confirmed = await showCustomModal({
+    title: `Excluir Linha ${index + 1}`,
+    text: 'Componentes posicionados nessa linha serão removidos. Deseja continuar?',
+    confirmText: 'Excluir',
+    cancelText: 'Cancelar'
+  });
+
+  if (!confirmed) return;
+
+  for (let c = 0; c < numCols; c++) {
+    clearCellComponentAt(index, c);
+  }
+
+  gridState.splice(index, 1);
+  rowHeights.splice(index, 1);
+  numRows--;
+  rowsInput.value = numRows;
+  clearInsertMode(false);
   rebuildOccupiedCells();
   redrawAll();
 }
@@ -320,12 +400,84 @@ function createLabelInsertButton(className, title, onClick) {
   return button;
 }
 
+function createLabelDeleteButton(title, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "label-delete-btn";
+  button.title = title;
+  button.setAttribute('aria-label', title);
+  button.textContent = "×";
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+function createLabelEditButton(className, title, text, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `label-edit-btn ${className}`;
+  button.title = title;
+  button.setAttribute('aria-label', title);
+  button.textContent = text;
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+async function editColumnWidth(index) {
+  const labelText = String.fromCharCode(65 + index);
+  const result = await showCustomModal({
+    title: 'Alterar Largura da Coluna',
+    text: `Digite a nova largura para a coluna ${labelText} (${minModuleSizeCm}-${maxModuleSizeCm} cm):`,
+    inputType: 'number',
+    initialValue: gridSizeToCm(columnWidths[index]),
+    confirmText: 'Alterar',
+    cancelText: 'Cancelar'
+  });
+
+  if (result !== false && result !== null && result !== '') {
+    const newSize = parseInt(result);
+    if (!isNaN(newSize) && newSize >= minModuleSizeCm && newSize <= maxModuleSizeCm) {
+      columnWidths[index] = cmToGridSize(newSize);
+      updateGrid();
+    } else {
+      showCustomModal({ title: 'Erro', text: `Por favor, insira um valor válido entre ${minModuleSizeCm} e ${maxModuleSizeCm} cm.`, confirmText: 'OK' });
+    }
+  }
+}
+
+async function editRowHeight(index) {
+  const result = await showCustomModal({
+    title: 'Alterar Altura da Linha',
+    text: `Digite a nova altura para a linha ${index + 1} (${minModuleSizeCm}-${maxModuleSizeCm} cm):`,
+    inputType: 'number',
+    initialValue: gridSizeToCm(rowHeights[index]),
+    confirmText: 'Alterar',
+    cancelText: 'Cancelar'
+  });
+
+  if (result !== false && result !== null && result !== '') {
+    const newSize = parseInt(result);
+    if (!isNaN(newSize) && newSize >= minModuleSizeCm && newSize <= maxModuleSizeCm) {
+      rowHeights[index] = cmToGridSize(newSize);
+      updateGrid();
+    } else {
+      showCustomModal({ title: 'Erro', text: `Por favor, insira um valor válido entre ${minModuleSizeCm} e ${maxModuleSizeCm} cm.`, confirmText: 'OK' });
+    }
+  }
+}
+
 function generateLabels() {
   labelsTop.innerHTML = '';
   labelsLeft.innerHTML = '';
   columnWidths.forEach((width, index) => {
     const label = document.createElement("div");
     const labelText = String.fromCharCode(65 + index);
+    label.classList.toggle('narrow-column-label', gridSizeToCm(width) < 40);
     label.title = `Coluna ${labelText}: ${formatCm(width)}`;
     label.innerHTML = `<span class="label-code">${labelText}</span><span class="label-measure">${formatCm(width)}</span>`;
     label.style.width = `${width}px`;
@@ -341,27 +493,17 @@ function generateLabels() {
       `Inserir coluna depois de ${labelText}`,
       () => insertColumnAt(index + 1)
     ));
-    label.addEventListener("click", async () => {
-      const internalWidth = width - borderWidth;
-      const result = await showCustomModal({
-        title: 'Alterar Largura da Coluna',
-        text: `Digite a nova largura para a coluna ${String.fromCharCode(65 + index)} (15-300 cm):`,
-        inputType: 'number',
-        initialValue: internalWidth,
-        confirmText: 'Alterar',
-        cancelText: 'Cancelar'
-      });
-
-      if (result !== false && result !== null && result !== '') {
-        const newSize = parseInt(result);
-        if (!isNaN(newSize) && newSize >= 15 && newSize <= 300) {
-          columnWidths[index] = cmToGridSize(newSize); 
-          updateGrid();
-        } else {
-          showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300 cm.', confirmText: 'OK' });
-        }
-      }
-    });
+    label.appendChild(createLabelDeleteButton(
+      `Excluir coluna ${labelText}`,
+      () => deleteColumnAt(index)
+    ));
+    label.appendChild(createLabelEditButton(
+      'edit-col-size',
+      `Alterar largura da coluna ${labelText}`,
+      '↔',
+      () => editColumnWidth(index)
+    ));
+    label.addEventListener("click", () => editColumnWidth(index));
     labelsTop.appendChild(label);
   });
 
@@ -383,27 +525,17 @@ function generateLabels() {
       `Inserir linha depois de ${labelText}`,
       () => insertRowAt(index + 1)
     ));
-    label.addEventListener("click", async () => {
-      const internalHeight = height - borderWidth;
-      const result = await showCustomModal({
-        title: 'Alterar Altura da Linha',
-        text: `Digite a nova altura para a linha ${index + 1} (15-300 cm):`,
-        inputType: 'number',
-        initialValue: internalHeight,
-        confirmText: 'Alterar',
-        cancelText: 'Cancelar'
-      });
-
-      if (result !== false && result !== null && result !== '') {
-        const newSize = parseInt(result);
-        if (!isNaN(newSize) && newSize >= 15 && newSize <= 300) {
-          rowHeights[index] = cmToGridSize(newSize);
-          updateGrid();
-        } else {
-          showCustomModal({ title: 'Erro', text: 'Por favor, insira um valor válido entre 15 e 300 cm.', confirmText: 'OK' });
-        }
-      }
-    });
+    label.appendChild(createLabelDeleteButton(
+      `Excluir linha ${labelText}`,
+      () => deleteRowAt(index)
+    ));
+    label.appendChild(createLabelEditButton(
+      'edit-row-size',
+      `Alterar altura da linha ${labelText}`,
+      '↕',
+      () => editRowHeight(index)
+    ));
+    label.addEventListener("click", () => editRowHeight(index));
     labelsLeft.appendChild(label);
   });
 }
@@ -509,6 +641,11 @@ async function insertFromActiveMode(r, c) {
 
   const { type, scope } = activeInsertMode;
   if (scope === 'row') {
+    if (c !== 0) {
+      showCustomModal({ title: 'Selecione a coluna A', text: 'Para inserir uma linha inteira, clique em um quadro vazio da coluna A.', confirmText: 'OK' });
+      return true;
+    }
+
     const insertedCount = fillRowWithComponent(r, type);
     clearInsertMode(false);
     redrawAll();
@@ -544,7 +681,7 @@ async function insertFromActiveMode(r, c) {
 }
 
 function highlightRowTargets(row, shouldHighlight) {
-  document.querySelectorAll(`.add-btn[data-row="${row}"]`).forEach((button) => {
+  document.querySelectorAll(`.add-btn[data-row="${row}"][data-col="0"]`).forEach((button) => {
     button.classList.toggle('insert-row-target', shouldHighlight);
   });
 }
@@ -737,11 +874,12 @@ async function showComponentMenu(e, r, c) { // Adicionamos async aqui
   menuPopup.style.top = `${e.clientY}px`;
   
   menuPopup.querySelectorAll(".option").forEach((opt) => {
-    opt.onclick = async () => { // Adicionamos async aqui
+    opt.onclick = async (event) => { // Adicionamos async aqui
+      event.stopPropagation();
       const selectedType = opt.dataset.select;
-      menuPopup.style.display = "none"; // Esconde o menu pequeno imediatamente
 
       if (selectedType === 'giro') {
+        menuPopup.style.display = "none"; // Esconde o menu pequeno imediatamente
         const giroOptions = await showGiroOptionsMenu(r, c);
         
         if (giroOptions) { // Se o usuário confirmou
@@ -758,11 +896,42 @@ async function showComponentMenu(e, r, c) { // Adicionamos async aqui
           redrawAll();
         }
       } else {
-        // Lógica antiga para outros componentes
-        gridState[r][c] = { type: selectedType, master: true };
-        redrawAll();
+        if (c === 0) {
+          showPlacementScopeMenu(event, selectedType, r, c);
+        } else {
+          menuPopup.style.display = "none";
+          gridState[r][c] = { type: selectedType, master: true };
+          redrawAll();
+        }
       }
     };
+  });
+}
+
+function showPlacementScopeMenu(e, type, r, c) {
+  menuPopup.classList.add('insert-mode-menu');
+  menuPopup.innerHTML = `
+    <button type="button" class="insert-mode-option" data-scope="cell">Inserir somente neste quadro</button>
+    <button type="button" class="insert-mode-option" data-scope="row">Inserir na linha inteira</button>
+  `;
+  menuPopup.style.display = "flex";
+  menuPopup.style.left = `${e.clientX}px`;
+  menuPopup.style.top = `${e.clientY}px`;
+
+  menuPopup.querySelectorAll(".insert-mode-option").forEach((option) => {
+    option.addEventListener('click', (event) => {
+      event.stopPropagation();
+      menuPopup.style.display = "none";
+      menuPopup.classList.remove('insert-mode-menu');
+
+      if (option.dataset.scope === 'row') {
+        fillRowWithComponent(r, type);
+      } else {
+        gridState[r][c] = { type, master: true };
+      }
+
+      redrawAll();
+    });
   });
 }
 
@@ -975,8 +1144,8 @@ exportModeSelect.addEventListener('change', () => {
 // --- EVENTOS GERAIS ---
 function applyPresetSize(target) {
   const newSize = parseInt(moduleSizePresetInput.value);
-  if (isNaN(newSize) || newSize < 15 || newSize > 300) {
-    showCustomModal({ title: 'Erro', text: 'Por favor, insira uma medida padrão entre 15 e 300 cm.', confirmText: 'OK' });
+  if (isNaN(newSize) || newSize < minModuleSizeCm || newSize > maxModuleSizeCm) {
+    showCustomModal({ title: 'Erro', text: `Por favor, insira uma medida padrão entre ${minModuleSizeCm} e ${maxModuleSizeCm} cm.`, confirmText: 'OK' });
     return;
   }
 

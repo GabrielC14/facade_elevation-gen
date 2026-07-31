@@ -1,26 +1,35 @@
-# Notas de Atualização da Versão 1.0.5 - 22/07/2026
+# Notas de Atualização da Versão 1.0.5 - 31/07/2026
 
 ## Novas Funcionalidades
 1. **Inserção de linhas e colunas no meio do croqui**
    - Adicionados botões de inserção nos rótulos do grid para criar colunas entre letras e linhas entre números.
    - Componentes já posicionados são deslocados automaticamente quando uma nova linha ou coluna é inserida.
 
-2. **Medidas em centímetros**
+2. **Exclusão de linhas e colunas**
+   - Adicionados botões para excluir qualquer linha ou coluna do croqui.
+   - Ao excluir, os módulos seguintes são reorganizados automaticamente.
+
+3. **Medidas em centímetros**
    - As larguras das colunas e alturas das linhas agora são exibidas em `cm`.
    - Os rótulos do grid mostram a identificação e a medida, como `A / 100cm` e `1 / 100cm`.
+   - O limite máximo de tamanho dos quadros foi aumentado para `400cm`.
 
-3. **Aplicação de medida em lote**
+4. **Aplicação de medida em lote**
    - Adicionado controle para aplicar uma medida padrão em todas as colunas, todas as linhas ou em tudo.
 
-4. **Exportação com cotas detalhadas**
+5. **Exportação com cotas detalhadas**
    - A pré-visualização do croqui agora permite escolher entre `Apresentação` e `Detalhadas`.
    - O modo `Apresentação` mantém as cotas gerais `L` e `H`.
    - O modo `Detalhadas` gera cotas por módulo e cotas totais no formato `L: 500cm` e `H: 300cm`.
    - A imagem de pré-visualização é atualizada ao trocar o tipo de cota.
 
-5. **Novo modo de inserção pela barra lateral**
+6. **Novo modo de inserção pela barra lateral**
    - Os componentes da barra lateral agora são inseridos por clique, sem precisar arrastar.
    - `Maxim-ar` e `Veneziana` permitem escolher entre inserir em um quadro específico ou preencher uma linha inteira.
+
+7. **Inserção de linha inteira pelo quadro**
+   - Ao clicar no `+` de um quadro da coluna A e escolher `Maxim-ar` ou `Veneziana`, agora é possível inserir o componente somente naquele quadro ou preencher a linha inteira.
+   - A opção de linha inteira fica restrita ao quadro mais à esquerda da linha.
 
 ## Correções
 1. **Reposicionamento ao inserir no meio**
@@ -33,6 +42,10 @@
 2. **Interface dos componentes**
    - Adicionado destaque visual para o componente selecionado e para os quadros disponíveis no modo de inserção.
    - Adicionado botão para cancelar o modo de inserção.
+
+3. **Edição de tamanho dos quadros**
+   - Adicionado botão de modificar nos rótulos de linhas e colunas para deixar mais claro onde alterar largura e altura.
+   - O clique direto no rótulo continua funcionando para editar o tamanho.
 
 ---
 
